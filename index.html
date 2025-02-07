@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智享云阁CWH</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+<!-- 对于PWA是必要的(start) -->
+
+    <!-- （A） “常用”标题字符集描述视口 -->
+    <meta name="home" content="你可以上传任何文件在智享云阁上">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+ 
+    <!-- （B） 图标和平台特定 -->
+    <!-- (B1) 好老的FAVICON -->
+    <link rel="icon" href="favicon.png" type="image/png">
+ 
+    <!-- (B2) 安卓/chrome(谷歌浏览器) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#ffbb00">
+ 
+    <!-- (B3) IOS 应用程序图标 + 移动 SAFARI -->
+    <link rel="apple-touch-icon" href="favicon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#ffbb00">
+    <meta name="apple-mobile-web-app-title" content="智享云阁">
+ 
+    <!-- (B4) WINDOWS -->
+    <meta name="msapplication-TileImage" content="favicon.png">
+    <meta name="msapplication-TileColor" content="#ffbb00">
+ 
+    <!-- (C) WEB 应用清单 -->
+    <!-- https://web.dev/add-manifest/ -->
+    <link rel="manifest" href="INTPWA/2-manifest.json">
+ 
+    <!-- (D) 服务工作者 -->
+    <script>
+    if ("serviceWorker" in navigator) { navigator.serviceWorker.register("INTPWA/3-sw.js"); }
+    </script>
+
+<!-- 对于PWA是必要的(end) -->
+    <style>
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-image: url(image/background/LittlePenguin.jpg);
+            /* 背景图片不随页面滚动而移动 */
+            background-attachment: fixed;
+            /* 背景图片铺满整个容器 */
+            background-size: cover;
+            /* 背景图片居中显示 */
+            background-position: center center;
+
+            color: #000000;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.5s ease;
+        }
+        </style>
+        <script>
+            // 背景图像数组
+            var bgImages = [
+                'image/background/LittlePenguin.jpg',
+                'image/background/Penguins.jpg', // 假设有另一张背景图像
+                'image/background/Penguins1.jpg',
+            ];
+            
+            // 当前背景图像索引
+            var currentIndex = 0;
+            
+            // 更换背景图像的函数
+            function changeBackground() {
+                // 计算下一张背景图像的索引
+                currentIndex = (currentIndex + 1) % bgImages.length;
+                // 更改 body 的背景图像
+                document.body.style.backgroundImage = 'url("' + bgImages[currentIndex] + '")';
+            }
+            
+            // 设置定时器，每分钟更换一次背景图像
+            setInterval(changeBackground, 10000);
+        </script>
+        <style>
+        span {
+           color: #ff0000
+        }
+
+        h1 {
+            color: #ff6600;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+
+        .file-input-label {
+            display: inline-block;
+            margin-left: 10px;
+            color: #000000;
+        }
+
+        .file-list-container {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            overflow-y: auto;
+            border: 1px solid #cccccc5e;
+            padding: 10px;
+            margin-top: 20px;
+            backdrop-filter: blur(30px);
+            background-image: url(image/FrostedGlassTexture/Frosted_Glass_Texture-file_list_container.png);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #f5ce335e;
+            padding: 10px;
+            text-align: left;
+            cursor: pointer; /* 添加光标样式以便单击 */
+        }
+
+        th {
+            background-color: #f3d86e5e;
+            color: #2e2e35;
+        }
+
+        input#search {
+            padding: 5px;
+            background-color: #ffc4005e;
+            border: 1px solid #ffbb005e;
+            height: 10px;
+            outline: none;
+            transition: background-color 0.3s ease, border 0.3s ease;
+        }
+        input#search:hover {
+            background-color: #ffbb005e;
+            border: 1px solid #ff91005e;
+        }
+
+        /* 进度显示的新样式 */
+        .progress-display {
+            margin-top: 10px;
+            color: #4caf50;
+        }
+
+
+
+        
+        .button {
+            border-radius: initial;
+            border: none;
+            width: 100%;
+            height: 50px;
+            background-color: #ffbb005e;
+            transition: background-color 0.2s ease, height 0.2s ease;
+        }
+        .button:hover {
+            background-color: #ff91005e; /* 鼠标悬停时背景颜色变化 */
+            height: 60px;
+        }
+
+        .information {
+            border-radius: initial;
+            border: none;
+            text-align: center;
+            width: 100%;
+            height: 23px;
+            background-color: #ebac0018;
+            transition: background-color 0.2s ease, height 0.2s ease;
+        }
+        .information:hover {
+            background-color: #ffcc3f5e; /* 鼠标悬停时背景颜色变化 */
+            height: 28px;
+        }
+
+        .Contactinformation {
+            border-radius: initial;
+            border: none;
+            text-align: center;
+            width: 100%;
+            height: 65px;
+            background-color: #ebac0000;
+            transition: background-color 0.2s ease, height 0.2s ease;
+        }
+        .Contactinformation:hover {
+            background-color: #ffcc3f5e; /* 鼠标悬停时背景颜色变化 */
+            height: 75px;
+        }
+
+        .bluebutton {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb005e;
+            transition: background-color 0.2s ease;
+            color: #ffffff;
+        }
+        .bluebutton:hover {
+            background-color: #ff91005e; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .RefreshButton {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb005e;
+            transition: background-color 0.2s ease;
+            color: #000000;
+            width: 100%;
+            height: 40px;
+        }
+        .RefreshButton:hover {
+            background-color: #ff91005e; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .sidebar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            position: fixed; /* 使侧边栏固定在页面 */
+            border: 1px solid #d6d6d65e;
+            top: 7%;
+            left: 0;
+            width: 14.5%;
+            height: 100%;
+            backdrop-filter: blur(30px);
+            background-image: url(image/FrostedGlassTexture/Frosted_Glass_Texture-sidebar.png);
+        }
+
+        footer {
+            text-align: center;
+            text-shadow: 0 0 2px #ffffff;
+            margin-top: 20px;
+            color: #888;
+        }
+
+        .Downloadbar {
+            top: 0;
+            left: 0;
+            width: 83%;
+            height: 100%;
+            position: absolute;
+            left: 15%;
+        }
+
+        .Uploadbar {
+            overflow: hidden;
+            background-color: #ebac005e;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            transition: height 0.3s ease;
+        }
+
+        .Aboutbar {
+            top: 0;
+            left: 0;
+            width: auto;
+            height: auto;
+            position: absolute;left: 70%;
+        }
+
+        .aboutsite {
+            overflow: hidden;
+            background-color: #ebac005e;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            transition: height 0.2s ease;
+        }
+
+        .Contact {
+            overflow: hidden;
+            background-color: #ebac005e;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            transition: height 0.2s ease;
+        }
+
+        .search {
+            padding: 5px;
+            background-color: #ffc4005e;
+            border: 1px solid #ffbb005e;
+            height: 10px;
+            outline: none;
+            transition: background-color 0.2s ease, border 0.2s ease;
+        }
+        .search:hover {
+            background-color: #ffbb005e;
+            border: 1px solid #ff91005e;
+        }
+
+        .FileFilteringsite {
+            overflow: hidden;
+            background-color: #ebac005e;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            transition: height 0.3s ease;
+        }
+
+        .UploadButton {
+            border-radius: initial;
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            height: 30px;
+            background-color: #55dd435e;
+            color: #000000;
+            transition: background-color 0.2s ease;
+        }
+        .UploadButton:hover {
+            background-color: #1eff005e; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .filtersite {
+            padding-bottom: 5px;
+            border: 1px solid #ffbb0000;
+            height: 16px;
+        }
+        .filtersite:hover {
+            border: 1px solid #ff7e7e34;
+            background-color: #ff7e7e34;
+        }
+        .filtersite.on {
+            border: 1px solid #ff00006c;
+            background-color: #ff7e7e6c;
+        }
+
+        .navbar {
+            backdrop-filter: blur(30px);
+            background-image: url(image/FrostedGlassTexture/Frosted_Glass_Texture-navbar.png);
+            margin-left: -20px;
+            position: fixed;
+            top: 0;
+            height: 7%;
+            width: 100%;
+            border: 1px solid #ff91005e; /* 修改文本框边框颜色 */
+        }
+
+        .navbarbutton {
+            padding: 0px 50px;
+            border-radius: initial;
+            border: none;
+            float: left;
+            display: block;
+            color: #000000;
+            background-color: #ffbb005e;
+            box-shadow: inset 0 0 0px #00000000;
+            text-align: center;
+            text-decoration: none;
+            height: 100%;
+            transition: background-color 0.2s ease; /* 添加过渡效果 */
+        }
+        .navbarbutton:hover {
+            background-color: #ff91005e;
+        }
+        .logout {
+            float: right;
+            border-radius: initial;
+            border: none;
+            text-align: center;
+            color: #ffffff;
+            width: 10%;
+            height: 100%;
+            background-color: #c20e0e5e;
+            transition: background-color 0.2s ease;
+        }
+        .logout:hover {
+            background-color: #ff00005e; /* 鼠标悬停时背景颜色变化 */
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+
+    <div class="Uploadbar" id="Uploadbar">
+        
+        <button id="UploadButton" class="necessaryBtn" onclick="ToggleMenu('Uploadbar','200px')">快速上传文件</button>
+        <form id="uploadForm" enctype="multipart/form-data">
+
+            <label for="file" class="custom-file-upload" style="color: #ffffff;">
+                <input type="file" id="file" name="file" onchange="displayFileName(this)" multiple required>
+                <span id="fileLabel" class="file-input-label">未选择文件</span>
+            </label>
+
+            <style>
+            .custom-file-upload {
+                display: inline-block;
+                width: 100%;
+                height: 30px;
+                color: #000000;
+                border: none;
+                background-color: #ffbb005e;
+                cursor: pointer;
+                text-align: center;
+                font-size: 16px;
+                transition: background-color 0.3s ease;
+            }
+            .custom-file-upload:hover {
+                background-color: #ffee005e;
+            }
+            .custom-file-upload input[type="file"] {
+                display: none;
+            }
+
+            .necessaryBtn {
+                border-radius: initial;
+                border: none;
+                width: 100%;
+                height: 50px;
+                background-color: #ffbb005e;
+                transition: background-color 0.3s ease;
+            }
+            .necessaryBtn:hover {
+                border-radius: initial;
+                border: none;
+                width: 100%;
+                height: 50px;
+                background-color: #ff91005e;
+            }
+            </style>
+
+            <button type="button" class="UploadButton" onclick="uploadFile()"><img src="ico/uploadfile.ico" alt="file" style="height: 70%;">上传</button>
+
+            <!-- 进度显示容器 -->
+            <div class="progress-display" id="progress-display" style="display: none;"></div>
+
+        </div>
+    </form>
+
+    <div class="FileFilteringsite" id="FileFilteringsite">
+        <button class="necessaryBtn" onclick="ToggleMenu('FileFilteringsite','302px')">文件筛选</button>
+        <input type="text" id="search" class="custom-input" style="width: 94.6%;" oninput="searchFiles()" placeholder="搜索文件">
+        <input type="text" id="searchUploader" class="search" style="width: 94.6%;" oninput="searchUploader()" placeholder="搜索上传者">
+
+        <div style="height: 208px; width:100%; overflow:auto;" id="style-4">
+
+            <text>一般类别</text>
+
+            <div class="filtersite" id="all">
+                <label><input type="radio" name="fileType" value="all" onchange="filterFiles(this)" onclick="Toggle('all')" checked>全部</label>
+            </div>
+
+            <div class="filtersite" id="exe">
+                <label><input type="radio" name="fileType" value="exe" onchange="filterFiles(this)" onclick="Toggle('exe')">可执行文件(WIN)</label>
+            </div>
+
+            <div class="filtersite" id="sb123">
+                <label><input type="radio" name="fileType" value="sb123" onchange="filterFiles(this)" onclick="Toggle('sb123')">Scratch123</label>
+            </div>
+    
+            <div class="filtersite" id="video">
+                <label><input type="radio" name="fileType" value="video" onchange="filterFiles(this)" onclick="Toggle('video')">视频</label>
+            </div>
+
+            <div class="filtersite" id="audio">
+                <label><input type="radio" name="fileType" value="audio" onchange="filterFiles(this)" onclick="Toggle('audio')">音频</label>
+            </div>
+
+            <div class="filtersite" id="php">
+                <label><input type="radio" name="fileType" value="php" onchange="filterFiles(this)" onclick="Toggle('php')">图像</label>
+            </div>
+
+            <div class="filtersite" id="zip">
+                <label><input type="radio" name="fileType" value="zip" onchange="filterFiles(this)" onclick="Toggle('zip')">压缩包</label>
+            </div>
+
+            <div class="filtersite" id="py">
+                <label><input type="radio" name="fileType" value="py" onchange="filterFiles(this)" onclick="Toggle('py')">Python</label>
+            </div>
+
+            <div class="filtersite" id="c">
+                <label><input type="radio" name="fileType" value="c" onchange="filterFiles(this)" onclick="Toggle('c')">C语言</label>
+            </div>
+
+            <div class="filtersite" id="3Dmodel">
+                <label><input type="radio" name="fileType" value="3Dmodel" onchange="filterFiles(this)" onclick="Toggle('3Dmodel')">3D模型</label>
+            </div>
+
+            <div class="filtersite" id="txt">
+                <label><input type="radio" name="fileType" value="txt" onchange="filterFiles(this)" onclick="Toggle('txt')">文档</label>
+            </div>
+
+            <div class="filtersite" id="crx">
+                <label><input type="radio" name="fileType" value="crx" onchange="filterFiles(this)" onclick="Toggle('crx')">浏览器扩展程序</label>
+            </div>
+
+            <text>特殊类别</text>
+
+            <div class="filtersite" id="game">
+                <label><input type="radio" name="fileType" value="game" onchange="filterFiles(this)" onclick="Toggle('game')">游戏</label>
+            </div>
+
+            <div class="filtersite" id="software">
+                <label><input type="radio" name="fileType" value="software" onchange="filterFiles(this)" onclick="Toggle('software')">软件</label>
+            </div>
+
+            <div class="filtersite" id="usefultools">
+                <label><input type="radio" name="fileType" value="usefultools" onchange="filterFiles(this)" onclick="Toggle('usefultools')">实用工具</label>
+            </div>
+
+            <div class="filtersite" id="teleplay">
+                <label><input type="radio" name="fileType" value="teleplay" onchange="filterFiles(this)" onclick="Toggle('teleplay')">电视剧</label>
+            </div>
+
+            <div class="filtersite" id="cartoon">
+                <label><input type="radio" name="fileType" value="cartoon" onchange="filterFiles(this)" onclick="Toggle('cartoon')">电视动画</label>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+function Toggle(Radio) {
+    // 获取所有类名为 'filtersite' 的元素
+    var filterSites = document.getElementsByClassName('filtersite');
+
+    // 遍历所有元素并移除 'on' 类
+    for (var i = 0; i < filterSites.length; i++) {
+        filterSites[i].classList.remove('on');
+    }
+
+    // 获取选中的单选按钮的元素
+    var selectedRadio = document.getElementById(Radio);
+
+    // 获取选中的单选按钮对应的 'filtersite' 元素，并添加 'on' 类
+    var correspondingFilterSite = document.getElementById(Radio);
+    if (correspondingFilterSite) {
+        correspondingFilterSite.classList.add('on');
+    }
+}
+Toggle('all')
+    </script>
+ 
+
+        <div class="Contact" id="Contact">
+            <button class="necessaryBtn" onclick="ToggleMenu('Contact','180px')">联系我们</button>
+
+            <a vertical-align: middle;>
+                <button class="Contactinformation">melonTMD:<br>melom1073900456<br>@outlook.com</button>
+            </a>
+            
+            <a vertical-align: middle;>
+                <button class="Contactinformation">bzmid:<br>CyberPawsTeam<br>@outlook.com</button>
+            </a>
+
+        </div>
+
+        <div class="aboutsite" id="aboutsite">
+            <button class="necessaryBtn" onclick="ToggleMenu('aboutsite','120px')">关于</button>
+            <a vertical-align: middle;>
+                <button class="information" onclick="openInNewTab('https://github.com/melonTMD/')">前端melonTMD</button>
+            </a>
+    
+            <a vertical-align: middle;>
+                <button class="information" onclick="openInNewTab('https://github.com/bzmid/')">后端/运维/站长bzmid</button>
+            </a>
+
+            <a vertical-align: middle;>
+                <button class="information" onclick="openInNewTab('https://qm.qq.com/q/cQacM5nsB2')">团队QQ：959101763</button>
+            </a>
+        </div>
+</div>
+
+    <div id="downloadPage" class="hidden">
+        <div class="Downloadbar">
+            <div style="width: 100%; height: 7%;"></div>
+        <span><strong>请谨慎下载文件，后果自负 </strong></span><p style="color: #ff0000; font-size: 13px"><strong>先登录后上传！！！</strong></p>
+        <span style="color: #000000; font-size: 13px">By 赛博爪CyberPaws团队</span>
+
+        <div class="file-list-container">
+                        
+            <button class="RefreshButton" onclick="updateFileList()" style="position: relative; display: flex; align-items: center; justify-content: center;">
+                <div style="display: flex; align-items: center;">
+                    <span style="font-weight: bold; color: black; margin-right: 5px;">重载</span>
+                    <img src="ico/reflash.ico" alt="reflash" style="height: 40px;">
+                </div>
+            </button>
+            
+            <h2>文件列表：</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)"><img src="ico/file.ico" alt="file" style="height: 20px;">文件名</th>
+                        <th onclick="sortTable(1)"><img src="ico/kb.ico" alt="kb" style="height: 20px;">大小</th>
+                        <th onclick="sortTable(2)"><img src="ico/time.ico" alt="time" style="height: 20px;">上传时间</th>
+                        <th onclick="sortTable(3)"><img src="ico/User.ico" alt="kb" style="height: 20px;">上传者</th>
+                        <th onclick="sortTable(4)"><img src="ico/MD5.ico" alt="kb" style="height: 20px;">MD5</th>
+                    </tr>
+                </thead>
+                <tbody id="fileList"></tbody>
+            </table>
+        </div>
+        <footer>
+            &copy; 2024 智享云阁. <a href="/team/Int.html" style="color: #007acc; text-decoration: underline;">赛博爪CyberPaws团队</a> 版权所有.
+        </footer>
+    </div>
+            
+<div class="navbar">
+    <div style="height: 100%; width: 14.5%; float: left; background-color: #f3f3f3; z-index: 1;">
+        <img src="title/CWHTitle.png" alt="CWHTitle" style="height: 100%">
+    </div>
+
+    <!-- 分割线 -->
+    <div style="height: 100%; width: 1px; float: left; background-color: #ff91005e;"></div>
+
+
+        <img src="image/user-48.png" alt="user" style="height: 100%; float: left;">
+        <button id="loginButton" class="navbarbutton" onclick="window.location.href='Login.html';">登入账户</button>
+        <button id="logoutButton" class="logout" onclick="logout()">退出登录</button>
+
+        <button class="navbarbutton" onclick="window.location.href='UploadPage(test).html';" id="Button">上传文件</button>
+    
+        <button class="navbarbutton" onclick="window.location.href='Troubleshooting.html';">疑难解答</button>
+
+        <button class="navbarbutton" onclick="window.location.href='support.html';">赞助</button>
+    </div>
+
+
+        <script>
+            let backgroundIndex = 1;
+            let autoSwitchInterval;
+            let autoSwitchStarted = false;
+
+            window.onload = function() {
+                const username = getAccessToken();
+                const logoutButton = document.getElementById('logoutButton');
+                const Button = document.getElementById('Button');
+                const uploadBar = document.querySelector('.Uploadbar');
+                if (username) {
+                    document.getElementById('loginButton').innerText = `欢迎，${username}`;
+                }
+                if (username) {
+                    // 如果用户名 cookie 存在，显示退出登录按钮
+                    logoutButton.style.display = 'block';
+                    UploadButton.style.display = 'block';
+                    uploadForm.style.display = 'block';
+                    uploadBar.style.display = 'block';
+                    Button.style.display = 'block';
+                } else {
+                    // 如果用户名 cookie 不存在，隐藏退出登录按钮
+                    logoutButton.style.display = 'none';
+                    UploadButton.style.display = 'none';
+                    uploadForm.style.display = 'none';
+                    uploadBar.style.display = 'none';
+                    Button.style.display = 'none';
+                    loginButton.onclick = function() {
+                        window.location.href = 'Login.html';
+                    };
+                }                
+                updateFileList();
+            };
+
+            function getAccessToken() {
+                const value = `; ${document.cookie}`;
+                const parts = value.split('; access_token=');
+                if (parts.length === 2) {
+                    const token = parts.pop().split(';').shift(); // 获取 JWT 令牌
+                    try {
+                        const payload = token.split('.')[1]; // JWT 令牌的第二部分是 payload
+                        const decodedPayload = atob(payload); // 使用 atob 解码 payload
+                        const payloadObject = JSON.parse(decodedPayload); // 将解码后的 payload 转换为对象
+                        if (payloadObject && payloadObject.username) {
+                            return payloadObject.username; // 返回从 payload 中提取的用户名
+                        } else {
+                            console.error("Invalid JWT token payload: Missing username field");
+                            return null; // 返回 null 表示无效的令牌
+                        }
+                    } catch (error) {
+                        console.error("Error decoding JWT token payload:", error);
+                        return null; // 返回 null 表示无效的令牌
+                    }
+                }
+                return null; // 返回 null 表示未找到对应的 cookie 或令牌
+            }
+
+
+            function logout() {
+                // 清除 cookie
+                document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+                // 刷新页面
+                window.location.reload();
+            }
+
+            function displayFileName(input) {
+                const fileLabel = document.getElementById('fileLabel');
+                fileLabel.textContent = input.files.length > 0 ? input.files.length + '个文件' : '未选择文件';
+            }
+    
+            function getToken() {
+                const cookies = document.cookie.split(';');
+                for (const cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'access_token') {
+                        return value;
+                    }
+                }
+                return null;
+            }
+            function uploadFile() {
+                const uploadForm = document.getElementById('uploadForm');
+                const formData = new FormData(uploadForm);
+                const progressDisplay = document.getElementById('progress-display');
+
+                // 获取 JWT 令牌
+                const token = getToken();
+
+                    // 将 JWT 令牌设置到请求头中
+                const headers = {
+                    'Authorization': `Bearer ${token}`
+                };
+                // 显示进度
+                progressDisplay.style.display = 'block';
+                progressDisplay.textContent = '0 KB/0 KB (0 KB/s)';
+
+                const xhr = new XMLHttpRequest();
+                let startTime = new Date().getTime(); // 记录开始上传时间
+
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        let total = e.total; // 总文件大小
+                        let loaded = e.loaded; // 已上传文件大小
+
+                        let unit = 'KB';
+                        let divisor = 1024;
+
+                        if (total > 1024 * 1024) {
+                            unit = 'MB';
+                            divisor = 1024 * 1024;
+                        } else if (total > 1024 * 1024 * 1024) {
+                            unit = 'GB';
+                            divisor = 1024 * 1024 * 1024;
+                        } else if (total > 1024 * 1024 * 1024 * 1024) {
+                            unit = 'TB';
+                            divisor = 1024 * 1024 * 1024 * 1024;
+                        }
+
+                        total /= divisor;
+                        loaded /= divisor;
+
+                        const currentTime = new Date().getTime(); // 获取当前时间
+                        const elapsedTime = (currentTime - startTime) / 1000; // 计算已经过的时间（秒）
+
+                        const speed = (loaded / elapsedTime).toFixed(2); // 计算上传速度（单位：KB/s）
+
+                        progressDisplay.textContent = `${loaded.toFixed(2)} ${unit}/${total.toFixed(2)} ${unit} (${speed} KB/s)`;
+                    }
+                }
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            const response = JSON.parse(xhr.responseText);
+                            alert(response.message); // 使用浏览器自带的提示框
+                            updateFileList();
+                        } else {
+                            console.error('Error uploading file:', xhr.statusText);
+                        }
+
+                        // 重置进度显示
+                        progressDisplay.style.display = 'none';
+                    }
+                };
+
+                xhr.open('POST', '/upload', true);
+                    // 设置请求头
+                Object.keys(headers).forEach(key => {
+                    xhr.setRequestHeader(key, headers[key]);
+                });
+
+                xhr.send(formData);
+            }
+
+    
+            function updateFileList() {
+                fetch('/fileList')
+                    .then(response => response.json())
+                    .then(data => {
+                        const fileList = document.getElementById('fileList');
+                        fileList.innerHTML = ''; // 清空文件列表
+                        data.files.forEach(file => {
+                            const row = fileList.insertRow();
+                            const cellName = row.insertCell(0);
+                            cellName.textContent = file.name;
+                            cellName.style.color = '#00f'; // 更改颜色以可点击
+                            cellName.style.textDecoration = 'underline'; // 添加下划线以便可点击
+                            cellName.onclick = () => downloadFile(file.name); // 添加用于下载的点击事件
+    
+                            row.insertCell(1).textContent = formatSize(file.size);
+                            row.insertCell(2).textContent = new Date(file.uploadTime).toLocaleString();
+                            row.insertCell(3).textContent = file.uploader;
+                            row.insertCell(4).textContent = file.md5;
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching file list:', error);
+                    });
+            }
+    
+            function downloadFile(filename) {
+                window.location.href = `/download/${filename}`;
+            }
+    
+            function formatSize(size) {
+                const kb = size / 1024;
+                if (kb < 1024) {
+                    return kb.toFixed(2) + ' KB';
+                } else {
+                    const mb = kb / 1024;
+                    if (mb < 1024) {
+                        return mb.toFixed(2) + ' MB';
+                    } else {
+                        const gb = mb / 1024;
+                        if (gb < 1024) {
+                            return gb.toFixed(2) + ' GB';
+                        } else {
+                            const tb = gb / 1024;
+                            return tb.toFixed(2) + ' TB';
+                        }
+                    }
+                }
+            }
+
+    
+            function searchFiles() {
+                let input, filter, table, tr, td, i, txtValue;
+                input = document.getElementById('search');
+                filter = input.value.toUpperCase();
+                table = document.getElementById('fileList');
+                tr = table.getElementsByTagName('tr');
+                for (i = 0; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName('td')[0];
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].style.display = '';
+                        } else {
+                            tr[i].style.display = 'none';
+                        }
+                    }
+                }
+            }
+
+            // 文件类型过滤函数
+            function filterFiles(radioButton) {
+                const fileType = radioButton.value;
+                const fileList = document.querySelectorAll('#fileList tr');
+
+                // 根据复选框的值进行过滤
+                fileList.forEach(file => {
+                    const fileName = file.getElementsByTagName('td')[0].textContent;
+                    switch (fileType) {
+                        case 'all':
+                            file.style.display = ''; // 显示全部文件
+                            break;
+                        case 'exe':
+                            file.style.display = fileName.endsWith('.exe') ? '' : 'none';
+                            break;
+                        case 'sb123':
+                            file.style.display = fileName.match(/\.(sb|sb2|sb3)$/i) ? '' : 'none';
+                            break;
+                        case 'video':
+                            file.style.display = fileName.match(/\.(mp4|avi|mov)$/i) ? '' : 'none';
+                            break;
+                        case 'audio':
+                            file.style.display = fileName.match(/\.(mp3|wav|ogg)$/i) ? '' : 'none';
+                            break;
+                        case 'py':
+                            file.style.display = fileName.endsWith('.py') ? '' : 'none';
+                            break;
+                        case 'c':
+                            file.style.display = fileName.match(/\.(cpp|cs|cc|cxx|c|obj)$/i) ? '' : 'none';
+                            break;
+                        case 'php':
+                            file.style.display = fileName.match(/\.(bmp|jpg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|WMF|webp|avif|apng)$/i) ? '' : 'none';
+                            break;
+                        case 'zip':
+                            file.style.display = fileName.match(/\.(zip|rar|xz|wim|tar|gzip|bzip2|7z|apk|ar|bz2|cbz|cpio|crx|ear|epub|gz|iso|jar|lzma|tar.7z|tar.Z|tar.bz2|tar.gz|tar.lz|tar.lzma|tar.lzo|tar.xz|tar.zst|war|zst)$/i) ? '' : 'none';
+                            break;
+                        case '3Dmodel':
+                            file.style.display = fileName.match(/\.(3dm|3ds|3dxml|amrt|arc|asm|catpart|catproduct|cgr|dae|dlv|dwf|dwg|dxf|exp|fbx|glb|gltf|iam|ifc|ifczip|iges|igs|ipt|jt|mfl|model|neu|obj|osgb|par|pkg|prc|prt|psm|pts|ptx|pwd|rvt|sab|sat|session|sldasm|sldprt|step|stl|stp|stpz|u3d|unv|vda|vrml|wrl|x_b|x_t|xas|xmt|xmt_bin|xmt_txt|xpr|xyz)$/i) ? '' : 'none';
+                            break;
+                        case 'txt':
+                            file.style.display = fileName.match(/\.(txt|doc|docx|xls|xlsx|pptx|hlp|wps|rtf|html|pdf|md)$/i) ? '' : 'none';
+                            break;
+                        case 'crx':
+                            file.style.display = fileName.endsWith('.crx') ? '' : 'none';
+                            break;
+
+                        case 'game':
+                            file.style.display = fileName.includes('#game') ? '' : 'none';
+                            break;
+                        case 'usefultools':
+                            file.style.display = fileName.includes('#usefultools') ? '' : 'none';
+                            break;
+                        case 'software':
+                            file.style.display = fileName.includes('#software') ? '' : 'none';
+                            break;
+                        case 'teleplay':
+                            file.style.display = fileName.includes('#teleplay') ? '' : 'none';
+                            break;
+                        case 'cartoon':
+                            file.style.display = fileName.includes('#cartoon') ? '' : 'none';
+                            break;
+                    }
+                });
+
+                // 取消其他单选按钮的选中状态
+                const radioButtons = document.querySelectorAll('input[name="fileType"]');
+                radioButtons.forEach(button => {
+                    if (button !== radioButton) {
+                        button.checked = false;
+                    }
+                });
+            }
+
+            function openInNewTab(url) {
+                window.open(url, '_blank');
+            }
+
+            function searchUploader() {
+                let input, filter, table, tr, td, i, txtValue;
+                input = document.getElementById('searchUploader');
+                filter = input.value.toUpperCase();
+                table = document.getElementById('fileList');
+                tr = table.getElementsByTagName('tr');
+                for (i = 0; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName('td')[3]; // 上传者所在的列
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].style.display = '';
+                        } else {
+                            tr[i].style.display = 'none';
+                        }
+                    }
+                }
+            }
+
+    
+            function sortTable(n) {
+                let table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+                table = document.querySelector("table");
+                switching = true;
+                dir = "asc";
+                while (switching) {
+                    switching = false;
+                    rows = table.rows;
+                    for (i = 1; i < (rows.length - 1); i++) {
+                        shouldSwitch = false;
+                        x = rows[i].getElementsByTagName("td")[n];
+                        y = rows[i + 1].getElementsByTagName("td")[n];
+                        if (dir == "asc") {
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else if (dir == "desc") {
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldSwitch) {
+                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                        switching = true;
+                        switchcount++;
+                    } else {
+                        if (switchcount == 0 && dir == "asc") {
+                            dir = "desc";
+                            switching = true;
+                        }
+                    }
+                }
+            }
+
+            function ToggleMenu(id,height) {
+            var sidebar = document.getElementById(id);
+            if (sidebar.style.height === height) {
+                sidebar.style.height = "50px";
+            } else {
+                sidebar.style.height = height;
+            }
+        }
+        </script>
+
+    </div>
+</div>
+</body>
+<style>
+    #style-4::-webkit-scrollbar-track {
+	    background-color: #F0F0F0;
+    }
+
+    #style-4::-webkit-scrollbar{    
+	    width: 9px;
+	    background-color: #cecece;
+    }
+
+    #style-4::-webkit-scrollbar-thumb {
+        background-color: #d1d1d1;  
+    }
+
+    #style-4::-webkit-scrollbar-thumb:active {    
+	    background-color: #a7a7a7;
+    }
+
+    /* 设置滚动条向上按钮的样式 */
+    #style-4::-webkit-scrollbar-button:vertical:decrement {
+        background-image: url('image/scrollbar/small/scrollbar_button_up.png');
+    }
+        /* 设置滚动条向下按钮的样式 */
+    #style-4::-webkit-scrollbar-button:vertical:decrement:hover {
+        background-image: url('image/scrollbar/small/scrollbar_button_up_hover.png');
+    }
+    #style-4::-webkit-scrollbar-button:vertical:decrement:active {
+        background-image: url('image/scrollbar/small/scrollbar_button_up_active.png');
+    }
+
+    /* 设置滚动条向下按钮的样式 */
+    #style-4::-webkit-scrollbar-button:vertical:increment {
+        background-image: url('image/scrollbar/small/scrollbar_button_down.png');
+    }
+        /* 设置滚动条向下按钮的样式 */
+    #style-4::-webkit-scrollbar-button:vertical:increment:hover {
+        background-image: url('image/scrollbar/small/scrollbar_button_down_hover.png');
+    }
+    #style-4::-webkit-scrollbar-button:vertical:increment:active {
+        background-image: url('image/scrollbar/small/scrollbar_button_down_active.png');
+    }
+
+
+    body::-webkit-scrollbar-track {
+        background-color: #ffbb00;
+    }
+
+    body::-webkit-scrollbar {    
+        width: 14px;
+        background-color: #cecece;
+    }
+
+    body::-webkit-scrollbar-thumb {
+        background-color: #d1d1d1;
+    }
+
+    body::-webkit-scrollbar-thumb:active {    
+        background-color: #a7a7a7;
+    }
+
+    /* 设置滚动条向上按钮的样式 */
+    body::-webkit-scrollbar-button:vertical:decrement {
+        background-image: url('image/scrollbar/big/scrollbar_button_up.png');
+    }
+    body::-webkit-scrollbar-button:vertical:decrement:hover {
+        background-image: url('image/scrollbar/big/scrollbar_button_up_hover.png');
+    }
+    body::-webkit-scrollbar-button:vertical:decrement:active {
+        background-image: url('image/scrollbar/big/scrollbar_button_up_active.png');
+    }
+
+    /* 设置滚动条向下按钮的样式 */
+    body::-webkit-scrollbar-button:vertical:increment {
+        background-image: url('image/scrollbar/big/scrollbar_button_down.png');
+    }
+    body::-webkit-scrollbar-button:vertical:increment:hover {
+        background-image: url('image/scrollbar/big/scrollbar_button_down_hover.png');
+    }
+    body::-webkit-scrollbar-button:vertical:increment:active {
+        background-image: url('image/scrollbar/big/scrollbar_button_down_active.png');
+    }
+</style>
+</html>
