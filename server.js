@@ -40,9 +40,9 @@ function getCurrentTimestamp() {
 // MySQL 连接配置
 const pool = mysql.createPool({
     connectionLimit: 10,
-    host: '192.168.50.76',
+    host: '127.0.0.1',
     user: 'root',
-    password: 'RTX4090@090221Bz',
+    password: '',
     database: 'users'
 }); 
 
