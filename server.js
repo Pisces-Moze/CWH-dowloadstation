@@ -268,12 +268,12 @@ app.get('/download/:filename', async (req, res) => {
 
 // 创建邮箱传输对象
 const transporter = nodemailer.createTransport({
-    host: 'smtp.qq.com', // Outlook SMTP服务器地址
-    port: 587, // Outlook SMTP服务器端口号
-    secure: false, // 不使用SSL加密
+    host: 'smtp.qq.com', 
+    port: 587, 
+    secure: false, 
     auth: {
-        user: '2907829820@qq.com', // 发送验证码的邮箱
-        pass: 'rqrlgefxexyhdfba' // 邮箱密码或授权码
+        user: '', // 发送验证码的邮箱
+        pass: '' // 邮箱密码或授权码
     }
 });
 
@@ -300,7 +300,7 @@ app.post('/sendVerificationCode', (req, res) => {
 
     // 发送邮件
     const mailOptions = {
-        from: '2907829820@qq.com', // 发送验证码的邮箱
+        from: '', // 发送验证码的邮箱
         to: email,
         subject: '验证您的 CloudWisHub 账号',
         html: `
@@ -463,7 +463,7 @@ app.use(express.static('public'));
 
 // 启动 HTTPS 服务器
 https.createServer(options, app).listen(port, () => {
-    console.log('狐物器，启动！ 进入： ${port}');
+    console.log(`狐物器，启动！进入：${port}`);
 });
 
 // 计算文件的 MD5
