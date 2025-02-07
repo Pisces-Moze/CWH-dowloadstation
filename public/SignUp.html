@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智享云阁CWH | 注册</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+                body {
+            font-family: 'Arial', sans-serif;
+            background-image: url(image/background/LittlePenguin.jpg);
+            /* 背景图片不随页面滚动而移动 */
+            background-attachment: fixed;
+            /* 背景图片铺满整个容器 */
+            background-size: cover;
+            /* 背景图片居中显示 */
+            background-position: center center;
+
+            color: #000000;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.5s ease;
+        }
+        </style>
+        <script>
+            // 背景图像数组
+            var bgImages = [
+                'image/background/LittlePenguin.jpg',
+                'image/background/Penguins.jpg', // 假设有另一张背景图像
+                'image/background/Penguins1.jpg',
+            ];
+            
+            // 当前背景图像索引
+            var currentIndex = 0;
+            
+            // 更换背景图像的函数
+            function changeBackground() {
+                // 计算下一张背景图像的索引
+                currentIndex = (currentIndex + 1) % bgImages.length;
+                // 更改 body 的背景图像
+                document.body.style.backgroundImage = 'url("' + bgImages[currentIndex] + '")';
+            }
+            
+            // 设置定时器，每分钟更换一次背景图像
+            setInterval(changeBackground, 10000);
+        </script>
+        <style>
+        .Loginbar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            width: 300px;
+            height: auto;
+            border: 1px solid #cccccca8;
+            background-image: url(image/FrostedGlassTexture/Frosted_Glass_Texture-sidebar.png);
+            backdrop-filter: blur(30px);
+            margin: auto;
+        }
+
+        .Loginbutton {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb00a8;
+            transition: background-color 0.2s ease;
+            color: #ffffff;
+            height: 40px;
+            width: 300px;
+        }
+        .Loginbutton:hover {
+            background-color: #ff9100a8; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .Login {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb00a8;
+            transition: background-color 0.2s ease;
+            color: #ffffff;
+            height: 40px;
+            width: 296px;
+            outline: none;
+        }
+        .Login:hover {
+            background-color: #ff9100a8; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .back {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            position: fixed; /* 使侧边栏固定在页面 */
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 7%;
+            background-image: url(image/FrostedGlassTexture/BackBtn/Frosted_Glass_Texture-BackBtn.png);
+            backdrop-filter: blur(30px);
+            z-index: 1;
+            transition: background-image 0.2s ease;
+        }
+        .back:hover {
+            background-image: url(image/FrostedGlassTexture/BackBtn/Frosted_Glass_Texture-BackBtn_hover.png);
+        }
+        #pageTitle {
+            display: block;
+            margin: 0 auto;
+            margin: 20px auto 0;
+        }
+    </style>
+
+    <body>
+    <a href="index.html">
+        <button class="back" >返回</button>
+    </a>
+        <img src="title/CWHTitle.png" alt="CWHTitle" id="pageTitle">
+        <div class="Loginbar" style="margin-top: 13%;">
+            <h2 style="margin: auto">注册</h2>
+                <input type="text" name="username" id="username" class="Login" placeholder="用户名" required>
+                <input type="email" name="email" id="email" class="Login" placeholder="邮箱" required>
+                
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <input type="text" name="emailCode" id="emailCode" class="Login" style="width: 236px;" placeholder="邮箱验证码" required>
+                    <button class="Loginbutton" id="sendVerificationCode" style="width: 60px; height: 42px;">发送验证码</button>
+                    <span id="countdown"></span> 
+                </div>                
+
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <input type="password" name="password" id="password" class="Login" style="width: 146px;" placeholder="密码" required>
+                    <input type="password" name="confirmPassword" id="confirmPassword" style="width: 146px;" class="Login" placeholder="确认密码" required>
+                </div> 
+
+                <button class="Loginbutton" id="registerForm">注册</button>
+                <a href="Login.html" style="vertical-align: middle;">没有账号？|登入</a>
+
+        </div>
+
+        <script>
+
+            // 验证用户名格式
+            function validateUsername(username) {
+                // 用户名至少包含一个字符
+                return username.length > 0;
+            }
+        
+            // 验证电子邮件格式
+            function validateEmail(email) {
+                // 使用正则表达式验证邮箱格式
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailPattern.test(email);
+            }
+        
+            // 验证密码格式
+            function validatePassword(password) {
+                // 密码至少包含6个字符
+                return password.length >= 6;
+            }
+        
+            // 验证确认密码是否与密码相匹配
+            function validateConfirmPassword(password, confirmPassword) {
+                return password === confirmPassword;
+            }
+        
+            // 定义全局变量用于存储倒计时秒数
+            let countdown = 120;
+
+            // 发送验证码请求
+            document.getElementById("sendVerificationCode").addEventListener("click", function(event) {
+                event.preventDefault();
+
+                // 获取用户邮箱
+                var email = document.getElementById("email").value;
+
+                // 验证邮箱格式
+                if (!validateEmail(email)) {
+                    alert("请输入有效的电子邮件地址");
+                    return;
+                }
+
+                // 禁用发送验证码按钮
+                this.disabled = true;
+
+                // 启动倒计时定时器
+                let timer = setInterval(function() {
+                    countdown--;
+                    document.getElementById("countdown").innerText = "(" + countdown + "s)";
+
+                    // 当倒计时结束时，恢复按钮状态
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        document.getElementById("countdown").innerText = ""; // 清空倒计时显示
+                        countdown = 120; // 重置倒计时秒数
+                        document.getElementById("sendVerificationCode").disabled = false; // 启用发送验证码按钮
+                    }
+                }, 1000);
+
+                // 向后端发送请求以获取验证码
+                fetch('/sendVerificationCode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('发送验证码失败，请重试');
+                    }
+                    alert('验证码已发送至您的邮箱，请注意查收');
+                })
+                .catch(error => {
+                    alert(error.message);
+                });
+            });
+
+            // 表单提交事件处理
+            document.getElementById("registerForm").addEventListener("click", function(event) {
+                event.preventDefault(); // 阻止表单默认提交行为
+        
+                var username = document.getElementById("username").value;
+                var email = document.getElementById("email").value;
+                var password = document.getElementById("password").value;
+                var confirmPassword = document.getElementById("confirmPassword").value;
+                var emailCode = document.getElementById("emailCode").value; // 新增获取邮箱验证码的值
+        
+                // 验证用户名、邮箱和密码格式
+                if (!validateUsername(username)) {
+                    alert("请输入有效的用户名");
+                    return;
+                }
+                if (!validateEmail(email)) {
+                    alert("请输入有效的电子邮件地址");
+                    return;
+                }
+                if (!validatePassword(password)) {
+                    alert("密码至少需要6个字符");
+                    return;
+                }
+                if (!validateConfirmPassword(password, confirmPassword)) {
+                    alert("确认密码与密码不匹配");
+                    return;
+                }
+        
+                // 发送注册请求，包括邮箱验证码
+                fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username, email: email, password: password, emailCode: emailCode })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('注册失败，请重试');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('注册成功');
+                        window.location.href = 'Login.html'; // 登录成功后跳转
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    alert(error.message);
+                });
+            });
+        
+        </script>
+        
+               
+    </body>
+</html>

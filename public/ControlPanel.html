@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智享云阁CWH | 管理员控制面板</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #ffffff;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center center;
+            color: #000000;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.5s ease;
+        }
+        
+        span {
+           color: #ff0000
+        }
+
+        h1 {
+            color: #ff6600;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+
+        .file-input-label {
+            display: inline-block;
+            margin-left: 10px;
+            color: #000000;
+        }
+
+        .file-list-container {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #f9f9f9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #f5ce33;
+            padding: 10px;
+            text-align: left;
+            cursor: pointer; /* 添加光标样式以便单击 */
+        }
+
+        th {
+            background-color: #f3d86e;
+            color: #2e2e35;
+        }
+
+        input#search {
+            padding: 5px;
+            background-color: #ffc400;
+            border: 1px solid #ffbb00;
+            height: 10px;
+            transition: background-color 0.3s ease, border 0.3s ease;
+        }
+        input#search:hover {
+            background-color: #ffbb00;
+            border: 1px solid #ff9100;
+        }
+
+        /* 进度显示的新样式 */
+        .progress-display {
+            margin-top: 10px;
+            color: #4caf50;
+        }
+
+
+
+        
+        .button {
+            border-radius: initial;
+            border: none;
+            width: 100%;
+            height: 50px;
+            background-color: #ffbb00;
+            box-shadow: inset 0 0 0px #000000;
+            transition: box-shadow 0.3s ease;
+        }
+        .button:hover {
+            box-shadow: inset 0 0 6px #000000;
+        }
+
+        .logout {
+            border-radius: initial;
+            border: none;
+            text-align: center;
+            color: #ffffff;
+            width: 100%;
+            height: 20px;
+            background-color: #c20e0e;
+            border: 0px solid #b60000;
+            box-shadow: inset 0 0 0px #000000;
+            transition: box-shadow 0.3s ease;
+        }
+        .logout:hover {
+            box-shadow: inset 0 0 6px #000000;
+        }
+
+        .RefreshButton {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb00;
+            color: #000000;
+            width: 100%;
+            height: 40px;
+            box-shadow: inset 0 0 0px #000000;
+            transition: box-shadow 0.3s ease;
+        }
+        .RefreshButton:hover {
+            box-shadow: inset 0 0 6px #000000;
+        }
+
+        .sidebar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            position: fixed; /* 使侧边栏固定在页面 */
+            border: 1px solid #d6d6d6;
+            top: 0;
+            left: 0;
+            width: 14.5%;
+            height: 100%;
+            background-color: #f3f3f3;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #888;
+        }
+
+        .Downloadbar {
+            top: 0;
+            left: 0;
+            width: 83%;
+            height: 100%;
+            position: absolute;left: 15%;
+        }
+
+        .Aboutbar {
+            top: 0;
+            left: 0;
+            width: auto;
+            height: auto;
+            position: absolute;left: 70%;
+        }
+
+        .bar {
+            border: none;
+            background-color: #f3f3f3;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+        }
+
+        .search {
+            padding: 5px;
+            background-color: #ffc400;
+            border: 1px solid #ffbb00;
+            height: 10px;
+            transition: background-color 0.3s ease, border 0.3s ease;
+        }
+        .search:hover {
+            background-color: #ffbb00;
+            border: 1px solid #ff9100;
+        }
+
+        .filtersite {
+            padding: 5px;
+            background-color: #ffbb00;
+            box-shadow: inset 0 0 0px #000000;
+            height: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+        .filtersite:hover {
+            box-shadow: inset 0 0 6px #000000;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    
+    <img src="title/ControlPanel.png" alt="CWHTitle" style="width: 100%;">  
+    
+    <button id="loginButton" class="button" onclick="redirectLogin()">登入</button>
+    
+    <!-- 添加退出登录按钮 -->
+    <button id="logoutButton" class="logout" onclick="logout()">退出登录</button>
+    </form>
+
+        <input type="text" id="search" class="custom-input" style="width: 94.6%;" oninput="searchFiles()" placeholder="搜索文件">
+        <input type="text" id="searchUploader" class="search" style="width: 94.6%;" oninput="searchUploader()" placeholder="搜索上传者">
+
+        <div style="height: 81%; width:100%; overflow:auto;" id="style-4">
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="all" onchange="filterFiles(this)" checked>全部</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="exe" onchange="filterFiles(this)">可执行文件(MS-win)</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="sb123" onchange="filterFiles(this)">Scratch123</label>
+            </div>
+    
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="video" onchange="filterFiles(this)">视频</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="audio" onchange="filterFiles(this)">音频</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="php" onchange="filterFiles(this)">图像</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="zip" onchange="filterFiles(this)">压缩包</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="py" onchange="filterFiles(this)">Python</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="c" onchange="filterFiles(this)">C语言</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="3Dmodel" onchange="filterFiles(this)">3D模型</label>
+            </div>
+
+            <div class="filtersite">
+                <label><input type="radio" name="fileType" value="txt" onchange="filterFiles(this)">文档</label>
+            </div>
+        </div>
+
+    </div>  
+
+        <button class="bar"></button>
+</div>
+<div class="content">
+    <div id="downloadPage" class="hidden">
+
+        <div class="Downloadbar">
+
+
+        <div class="file-list-container">
+                        
+            <button class="RefreshButton" onclick="updateFileList()" style="position: relative; display: flex; align-items: center; justify-content: center;">
+                <div style="display: flex; align-items: center;">
+                    <span style="font-weight: bold; color: black; margin-right: 5px;">重载</span>
+                    <img src="ico/reflash.ico" alt="reflash" style="height: 40px;">
+                </div>
+            </button>
+            
+            <h2>文件列表：</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)"><img src="ico/file.ico" alt="file" style="height: 20px;">文件名</th>
+                        <th onclick="sortTable(1)"><img src="ico/kb.ico" alt="kb" style="height: 20px;">大小</th>
+                        <th onclick="sortTable(2)"><img src="ico/time.ico" alt="time" style="height: 20px;">上传时间</th>
+                        <th onclick="sortTable(3)"><img src="ico/User.ico" alt="kb" style="height: 20px;">上传者</th>
+                        <th onclick="sortTable(4)"><img src="ico/MD5.ico" alt="kb" style="height: 20px;">MD5</th>
+                        <th onclick="sortTable(5)">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="fileList"></tbody>
+            </table>
+        </div>
+        <footer>
+            &copy; 2024- 至今 智享云阁 by <a href="/team/Int.html" style="color: #007acc; text-decoration: underline;">赛博爪CyberPaws团队</a>. All rights reserved.
+        </footer>
+    </div>
+    
+        <script>
+            let backgroundIndex = 1;
+            let autoSwitchInterval;
+            let autoSwitchStarted = false;
+
+            window.onload = function() {
+                const username = getAccessToken();
+                const logoutButton = document.getElementById('logoutButton');
+                const uploadBar = document.querySelector('.Uploadbar');
+                if (username) {
+                    document.getElementById('loginButton').innerText = `欢迎，${username}`;
+                }
+                if (username) {
+                    // 如果用户名 cookie 存在，显示退出登录按钮
+                    logoutButton.style.display = 'block';
+                    UploadButton.style.display = 'block';
+                    uploadForm.style.display = 'block';
+                    uploadBar.style.display = 'block';
+                } else {
+                    // 如果用户名 cookie 不存在，隐藏退出登录按钮
+                    logoutButton.style.display = 'none';
+                    UploadButton.style.display = 'none';
+                    uploadForm.style.display = 'none';
+                    uploadBar.style.display = 'none';
+                    loginButton.onclick = function() {
+                        window.location.href = 'Login.html';
+                    };
+                }                
+                updateFileList();
+            };
+
+            function getAccessToken() {
+                const value = `; ${document.cookie}`;
+                const parts = value.split('; access_token=');
+                if (parts.length === 2) {
+                    const token = parts.pop().split(';').shift(); // 获取 JWT 令牌
+                    try {
+                        const payload = token.split('.')[1]; // JWT 令牌的第二部分是 payload
+                        const decodedPayload = atob(payload); // 使用 atob 解码 payload
+                        const payloadObject = JSON.parse(decodedPayload); // 将解码后的 payload 转换为对象
+                        if (payloadObject && payloadObject.username) {
+                            return payloadObject.username; // 返回从 payload 中提取的用户名
+                        } else {
+                            console.error("Invalid JWT token payload: Missing username field");
+                            return null; // 返回 null 表示无效的令牌
+                        }
+                    } catch (error) {
+                        console.error("Error decoding JWT token payload:", error);
+                        return null; // 返回 null 表示无效的令牌
+                    }
+                }
+                return null; // 返回 null 表示未找到对应的 cookie 或令牌
+            }
+
+
+            function logout() {
+                // 清除 cookie
+                document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+                // 刷新页面
+                window.location.reload();
+            }
+
+            function displayFileName(input) {
+                const fileLabel = document.getElementById('fileLabel');
+                fileLabel.textContent = input.files.length > 0 ? input.files.length + '个文件' : '未选择文件';
+            }
+    
+            function uploadFile() {
+                const uploadForm = document.getElementById('uploadForm');
+                const formData = new FormData(uploadForm);
+                const progressDisplay = document.getElementById('progress-display');
+
+                // 获取 JWT 令牌
+                const token = localStorage.getItem('access_token');
+                console.log(token); 
+                    // 将 JWT 令牌设置到请求头中
+                const headers = {
+                    'Authorization': `Bearer ${token}`
+                };
+                // 显示进度
+                progressDisplay.style.display = 'block';
+                progressDisplay.textContent = '0 KB/0 KB (0 KB/s)';
+
+                const xhr = new XMLHttpRequest();
+                let startTime = new Date().getTime(); // 记录开始上传时间
+
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        let total = e.total; // 总文件大小
+                        let loaded = e.loaded; // 已上传文件大小
+
+                        let unit = 'KB';
+                        let divisor = 1024;
+
+                        if (total > 1024 * 1024) {
+                            unit = 'MB';
+                            divisor = 1024 * 1024;
+                        } else if (total > 1024 * 1024 * 1024) {
+                            unit = 'GB';
+                            divisor = 1024 * 1024 * 1024;
+                        } else if (total > 1024 * 1024 * 1024 * 1024) {
+                            unit = 'TB';
+                            divisor = 1024 * 1024 * 1024 * 1024;
+                        }
+
+                        total /= divisor;
+                        loaded /= divisor;
+
+                        const currentTime = new Date().getTime(); // 获取当前时间
+                        const elapsedTime = (currentTime - startTime) / 1000; // 计算已经过的时间（秒）
+
+                        const speed = (loaded / elapsedTime).toFixed(2); // 计算上传速度（单位：KB/s）
+
+                        progressDisplay.textContent = `${loaded.toFixed(2)} ${unit}/${total.toFixed(2)} ${unit} (${speed} KB/s)`;
+                    }
+                }
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            const response = JSON.parse(xhr.responseText);
+                            alert(response.message); // 使用浏览器自带的提示框
+                            updateFileList();
+                        } else {
+                            console.error('Error uploading file:', xhr.statusText);
+                        }
+
+                        // 重置进度显示
+                        progressDisplay.style.display = 'none';
+                    }
+                };
+
+                xhr.open('POST', '/upload', true);
+                    // 设置请求头
+                Object.keys(headers).forEach(key => {
+                    xhr.setRequestHeader(key, headers[key]);
+                });
+
+                xhr.send(formData);
+            }
+
+    
+            function updateFileList() {
+                fetch('/fileList')
+                    .then(response => response.json())
+                    .then(data => {
+                        const fileList = document.getElementById('fileList');
+                        fileList.innerHTML = ''; // 清空文件列表
+                        data.files.forEach(file => {
+                            const row = fileList.insertRow();
+                            const cellName = row.insertCell(0);
+                            cellName.textContent = file.name;
+                            cellName.style.color = '#00f'; // 更改颜色以可点击
+                            cellName.style.textDecoration = 'underline'; // 添加下划线以便可点击
+                            cellName.onclick = () => downloadFile(file.name); // 添加用于下载的点击事件
+    
+                            row.insertCell(1).textContent = formatSize(file.size);
+                            row.insertCell(2).textContent = new Date(file.uploadTime).toLocaleString();
+                            row.insertCell(3).textContent = file.uploader;
+                            row.insertCell(4).textContent = file.md5;
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching file list:', error);
+                    });
+            }
+    
+            function downloadFile(filename) {
+                window.location.href = `/download/${filename}`;
+            }
+    
+            function formatSize(size) {
+                const kb = size / 1024;
+                if (kb < 1024) {
+                    return kb.toFixed(2) + ' KB';
+                } else {
+                    const mb = kb / 1024;
+                    if (mb < 1024) {
+                        return mb.toFixed(2) + ' MB';
+                    } else {
+                        const gb = mb / 1024;
+                        if (gb < 1024) {
+                            return gb.toFixed(2) + ' GB';
+                        } else {
+                            const tb = gb / 1024;
+                            return tb.toFixed(2) + ' TB';
+                        }
+                    }
+                }
+            }
+
+    
+            function searchFiles() {
+                let input, filter, table, tr, td, i, txtValue;
+                input = document.getElementById('search');
+                filter = input.value.toUpperCase();
+                table = document.getElementById('fileList');
+                tr = table.getElementsByTagName('tr');
+                for (i = 0; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName('td')[0];
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].style.display = '';
+                        } else {
+                            tr[i].style.display = 'none';
+                        }
+                    }
+                }
+            }
+
+            // 文件类型过滤函数
+            function filterFiles(radioButton) {
+                const fileType = radioButton.value;
+                const fileList = document.querySelectorAll('#fileList tr');
+
+                // 根据复选框的值进行过滤
+                fileList.forEach(file => {
+                    const fileName = file.getElementsByTagName('td')[0].textContent;
+                    switch (fileType) {
+                        case 'all':
+                            file.style.display = ''; // 显示全部文件
+                            break;
+                        case 'exe':
+                            file.style.display = fileName.endsWith('.exe') ? '' : 'none';
+                            break;
+                        case 'sb123':
+                            file.style.display = fileName.match(/\.(sb|sb2|sb3)$/i) ? '' : 'none';
+                            break;
+                        case 'video':
+                            file.style.display = fileName.match(/\.(mp4|avi|mov)$/i) ? '' : 'none';
+                            break;
+                        case 'audio':
+                            file.style.display = fileName.match(/\.(mp3|wav|ogg)$/i) ? '' : 'none';
+                            break;
+                        case 'py':
+                            file.style.display = fileName.endsWith('.py') ? '' : 'none';
+                            break;
+                        case 'c':
+                            file.style.display = fileName.match(/\.(cpp|cs|cc|cxx|c|obj)$/i) ? '' : 'none';
+                            break;
+                        case 'php':
+                            file.style.display = fileName.match(/\.(bmp|jpg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|WMF|webp|avif|apng)$/i) ? '' : 'none';
+                            break;
+                        case 'zip':
+                            file.style.display = fileName.match(/\.(zip|rar|xz|wim|tar|gzip|bzip2|7z|apk|ar|bz2|cbz|cpio|crx|ear|epub|gz|iso|jar|lzma|tar.7z|tar.Z|tar.bz2|tar.gz|tar.lz|tar.lzma|tar.lzo|tar.xz|tar.zst|war|zst)$/i) ? '' : 'none';
+                            break;
+                        case '3Dmodel':
+                            file.style.display = fileName.match(/\.(3dm|3ds|3dxml|amrt|arc|asm|catpart|catproduct|cgr|dae|dlv|dwf|dwg|dxf|exp|fbx|glb|gltf|iam|ifc|ifczip|iges|igs|ipt|jt|mfl|model|neu|obj|osgb|par|pkg|prc|prt|psm|pts|ptx|pwd|rvt|sab|sat|session|sldasm|sldprt|step|stl|stp|stpz|u3d|unv|vda|vrml|wrl|x_b|x_t|xas|xmt|xmt_bin|xmt_txt|xpr|xyz)$/i) ? '' : 'none';
+                            break;
+                        case 'txt':
+                            file.style.display = fileName.match(/\.(txt|doc|docx|xls|xlsx|pptx|hlp|wps|rtf|html|pdf|md)$/i) ? '' : 'none';
+                            break;
+                    }
+                });
+
+                // 取消其他单选按钮的选中状态
+                const radioButtons = document.querySelectorAll('input[name="fileType"]');
+                radioButtons.forEach(button => {
+                    if (button !== radioButton) {
+                        button.checked = false;
+                    }
+                });
+            }
+
+            function openInNewTab(url) {
+                window.open(url, '_blank');
+            }
+
+            function searchUploader() {
+                let input, filter, table, tr, td, i, txtValue;
+                input = document.getElementById('searchUploader');
+                filter = input.value.toUpperCase();
+                table = document.getElementById('fileList');
+                tr = table.getElementsByTagName('tr');
+                for (i = 0; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName('td')[3]; // 上传者所在的列
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].style.display = '';
+                        } else {
+                            tr[i].style.display = 'none';
+                        }
+                    }
+                }
+            }
+
+    
+            function sortTable(n) {
+                let table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+                table = document.querySelector("table");
+                switching = true;
+                dir = "asc";
+                while (switching) {
+                    switching = false;
+                    rows = table.rows;
+                    for (i = 1; i < (rows.length - 1); i++) {
+                        shouldSwitch = false;
+                        x = rows[i].getElementsByTagName("td")[n];
+                        y = rows[i + 1].getElementsByTagName("td")[n];
+                        if (dir == "asc") {
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else if (dir == "desc") {
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldSwitch) {
+                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                        switching = true;
+                        switchcount++;
+                    } else {
+                        if (switchcount == 0 && dir == "asc") {
+                            dir = "desc";
+                            switching = true;
+                        }
+                    }
+                }
+            }
+        </script>
+
+    </div>
+</div>
+
+</body>
+<style>
+    #style-4::-webkit-scrollbar-track
+    {
+	    -webkit-box-shadow: inset 0 0 6px #6d5513;
+	    background-color: #ffbb00;
+    }
+
+    #style-4::-webkit-scrollbar
+    {    
+	    width: 10px;
+	    background-color: #F5F5F5;
+    }
+
+    #style-4::-webkit-scrollbar-thumb
+    {
+        background-color: #ebebeb;
+	    -webkit-box-shadow: inset 0 0 6px #f3f3f3;
+    }
+</style>
+</html>

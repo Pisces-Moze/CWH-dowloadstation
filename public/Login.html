@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智享云阁CWH | 登入</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+                body {
+            font-family: 'Arial', sans-serif;
+            background-image: url(image/background/LittlePenguin.jpg);
+            /* 背景图片不随页面滚动而移动 */
+            background-attachment: fixed;
+            /* 背景图片铺满整个容器 */
+            background-size: cover;
+            /* 背景图片居中显示 */
+            background-position: center center;
+
+            color: #000000;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.5s ease;
+        }
+        </style>
+        <script>
+            // 背景图像数组
+            var bgImages = [
+                'image/background/LittlePenguin.jpg',
+                'image/background/Penguins.jpg', // 假设有另一张背景图像
+                'image/background/Penguins1.jpg',
+            ];
+            
+            // 当前背景图像索引
+            var currentIndex = 0;
+            
+            // 更换背景图像的函数
+            function changeBackground() {
+                // 计算下一张背景图像的索引
+                currentIndex = (currentIndex + 1) % bgImages.length;
+                // 更改 body 的背景图像
+                document.body.style.backgroundImage = 'url("' + bgImages[currentIndex] + '")';
+            }
+            
+            // 设置定时器，每分钟更换一次背景图像
+            setInterval(changeBackground, 10000);
+        </script>
+        <style>
+        .Loginbar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            width: 300px;
+            height: auto;
+            border: 1px solid #cccccca8;
+            background-image: url(image/FrostedGlassTexture/Frosted_Glass_Texture-sidebar.png);
+            backdrop-filter: blur(30px);
+            margin: auto;
+        }
+
+        .Loginbutton {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb00a8;
+            transition: background-color 0.2s ease;
+            color: #ffffff;
+            height: 40px;
+            width: 300px;
+        }
+        .Loginbutton:hover {
+            background-color: #ff9100a8; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .Login {
+            border-radius: initial;
+            border: none;
+            background-color: #ffbb00a8;
+            transition: background-color 0.2s ease;
+            color: #ffffff;
+            height: 40px;
+            width: 296px;
+            outline: none;
+        }
+        .Login:hover {
+            background-color: #ff9100a8; /* 鼠标悬停时背景颜色变化 */
+        }
+        .information {
+            border-radius: initial;
+            border: none;
+            text-align: center;
+            width: 100%;
+            color: #ffffff;
+            height: 40px;
+            background-color: #ebac00a8;
+            transition: background-color 0.2s ease, height 0.2s ease;
+        }
+        .information:hover {
+            background-color: #ff9100a8; /* 鼠标悬停时背景颜色变化 */
+        }
+        #pageTitle {
+            display: block;
+            margin: 0 auto;
+            margin: 20px auto 0;
+        }
+        .back {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            position: fixed; /* 使侧边栏固定在页面 */
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 7%;
+            background-image: url(image/FrostedGlassTexture/BackBtn/Frosted_Glass_Texture-BackBtn.png);
+            backdrop-filter: blur(30px);
+            z-index: 1;
+            transition: background-image 0.2s ease;
+        }
+        .back:hover {
+            background-image: url(image/FrostedGlassTexture/BackBtn/Frosted_Glass_Texture-BackBtn_hover.png);
+        }
+    </style>
+
+    <body>
+        <a href="index.html"vertical-align: middle;>
+            <button class="back">返回</button>
+        </a>
+
+        <img src="title/CWHTitle.png" alt="CWHTitle" id="pageTitle">
+        <div class="Loginbar" style="margin-top: 13%;">
+            <h2 style="margin: auto">登入</h2>
+            <input type="text" id="username" class="Login" placeholder="用户名">
+            <input type="password" id="password" class="Login" placeholder="密码">
+            <button class="Loginbutton" id="Login">登入</button>
+            <a href="SignUp.html" style="vertical-align: middle;">没有账号？|注册</a>
+        </div>
+
+        <script>
+            document.getElementById("Login").addEventListener("click", function() {
+                var username = document.getElementById("username").value;
+                var password = document.getElementById("password").value;
+        
+                // 发送登录请求
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({username: username, password: password})
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('登录成功');
+                        window.location.href = 'index.html'; // 登录成功后跳转到主界面
+                    } else {
+                        alert('登录失败，请检查用户名和密码');
+                    }
+                })
+                .catch(error => {
+                    console.error('提交错误', error);
+                    alert('登录失败，请稍后重试');
+                });
+            });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智享云阁CWH | 上传页面(测试)</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style> 
+            body {
+            font-family: 'Arial', sans-serif;
+            background-image: url(image/background/LittlePenguin.jpg);
+            /* 背景图片不随页面滚动而移动 */
+            background-attachment: fixed;
+            /* 背景图片铺满整个容器 */
+            background-size: cover;
+            /* 背景图片居中显示 */
+            background-position: center center;
+
+            color: #000000;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.5s ease;
+        }
+        </style>
+        <script>
+            // 背景图像数组
+            var bgImages = [
+                'image/background/LittlePenguin.jpg',
+                'image/background/Penguins.jpg', // 假设有另一张背景图像
+                'image/background/Penguins1.jpg',
+            ];
+            
+            // 当前背景图像索引
+            var currentIndex = 0;
+            
+            // 更换背景图像的函数
+            function changeBackground() {
+                // 计算下一张背景图像的索引
+                currentIndex = (currentIndex + 1) % bgImages.length;
+                // 更改 body 的背景图像
+                document.body.style.backgroundImage = 'url("' + bgImages[currentIndex] + '")';
+            }
+            
+            // 设置定时器，每分钟更换一次背景图像
+            setInterval(changeBackground, 10000);
+        </script>
+        <style>
+        .UploadButton {
+            border-radius: initial;
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            height: 30px;
+            background-color: #1eff00;
+            transition: background-color 0.3s ease;
+        }
+        .UploadButton:hover {
+            background-color: #17c700; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .back {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            position: fixed; /* 使侧边栏固定在页面 */
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 7%;
+            background-color: #ffbb005e;
+            backdrop-filter: blur(30px);
+            transition: background-color 0.3s ease;
+        }
+        .back:hover {
+            background-color: #ff91005e;
+        }
+
+        .Button {
+            border-radius: initial;
+            color: #000000;
+            border: none;
+            width: 100%;
+            height: 30px;
+            background-color: #ffee005e;
+            transition: background-color 0.3s ease;
+        }
+        .Button:hover {
+            background-color: #ffbb005e; /* 鼠标悬停时背景颜色变化 */
+        }
+
+        .Loginbar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            width: 300px;
+            height: auto;
+            border: 1px solid #cccccc5e;
+            background-color: #f9f9f95e;
+            backdrop-filter: blur(30px);
+            margin: auto;
+        }
+
+        #pageTitle {
+            display: block;
+            margin: 0 auto;
+            margin: 20px auto 0;
+        }
+
+        .filtersite {
+            padding: 5px;
+            border: 1px solid #ffbb0000;
+            height: 20px;
+            transition: border 0.3s ease;
+        }
+        .filtersite:hover {
+            border: 1px solid #000000;
+        }
+
+        .filesitebar {
+            overflow: hidden;
+            width: 100%;
+            height: 120px;
+            color: #000000;
+            background-color: #ececec;
+            border: none;
+            text-align: center;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <button class="back" onclick="window.location.href='index.html';">返回</button>
+
+    <img src="title/UploadPage.png" alt="CWHTitle" id="pageTitle">
+
+<div class="Loginbar" style="margin-top: 13px;">
+        <form id="uploadForm" enctype="multipart/form-data">
+
+            <label for="file" class="custom-file-upload" style="color: #ffffff;">
+                <input type="file" id="file" name="file" onchange="displayFileName(this)" multiple required>
+                <span id="fileLabel" class="file-input-label" style="color: #000000;">未选择文件</span>
+            </label>
+
+            <style>
+            .custom-file-upload {
+                display: inline-block;
+                width: 100%;
+                height: 200px;
+                box-shadow: inset 0 0 6px #000000;
+                color: #000000;
+                background-color: #ececec;
+                border: none;
+                cursor: pointer;
+                text-align: center;
+                font-size: 16px;
+            }
+            .custom-file-upload input[type="file"] {
+                display: none;
+            }
+
+            </style>
+
+<div class="filesitebar"  style="overflow:auto; background-color: #ffbb00;"  id="style-4">
+
+    <div class="filtersite">
+        <label><input type="radio" name="fileType" value="game" onchange="filterFiles(this)">游戏</label>
+    </div>
+
+    <div class="filtersite">
+        <label><input type="radio" name="fileType" value="software" onchange="filterFiles(this)">软件</label>
+    </div>
+
+    <div class="filtersite">
+        <label><input type="radio" name="fileType" value="usefultools" onchange="filterFiles(this)">实用工具</label>
+    </div>
+
+    <div class="filtersite">
+        <label><input type="radio" name="fileType" value="teleplay" onchange="filterFiles(this)">电视剧</label>
+    </div>
+
+    <div class="filtersite">
+        <label><input type="radio" name="fileType" value="cartoon" onchange="filterFiles(this)">电视动画</label>
+    </div>
+
+    <style>
+        #style-4::-webkit-scrollbar-track
+        {
+            -webkit-box-shadow: inset 0 0 6px #6d5513;
+            background-color: #ffbb00;
+        }
+    
+        #style-4::-webkit-scrollbar
+        {    
+            width: 10px;
+            background-color: #F5F5F5;
+        }
+    
+        #style-4::-webkit-scrollbar-thumb
+        {
+            background-color: #ebebeb;
+            -webkit-box-shadow: inset 0 0 6px #f3f3f3;
+        }
+    </style>
+    
+</div>
+
+    <button type="button" class="UploadButton" onclick="uploadFile()"><img src="ico/uploadfile.ico" alt="file" style="height: 70%;">上传</button>
+
+            <!-- 进度显示容器 -->
+            <div class="progress-display" id="progress-display" style="display: none;"></div>
+</div>
+
+        <script>
+            let backgroundIndex = 1;
+            let autoSwitchInterval;
+            let autoSwitchStarted = false;
+
+            window.onload = function() {
+                const username = getAccessToken();
+                const logoutButton = document.getElementById('logoutButton');
+                const uploadBar = document.querySelector('.Uploadbar');
+                if (username) {
+                    document.getElementById('loginButton').innerText = `欢迎，${username}`;
+                }
+                if (username) {
+                    // 如果用户名 cookie 存在，显示退出登录按钮
+                    logoutButton.style.display = 'block';
+                    UploadButton.style.display = 'block';
+                    uploadForm.style.display = 'block';
+                    uploadBar.style.display = 'block';
+                } else {
+                    // 如果用户名 cookie 不存在，隐藏退出登录按钮
+                    logoutButton.style.display = 'none';
+                    UploadButton.style.display = 'none';
+                    uploadForm.style.display = 'none';
+                    uploadBar.style.display = 'none';
+                    loginButton.onclick = function() {
+                        window.location.href = 'Login.html';
+                    };
+                }                
+                updateFileList();
+            };
+
+            function getAccessToken() {
+                const value = `; ${document.cookie}`;
+                const parts = value.split('; access_token=');
+                if (parts.length === 2) {
+                    const token = parts.pop().split(';').shift(); // 获取 JWT 令牌
+                    try {
+                        const payload = token.split('.')[1]; // JWT 令牌的第二部分是 payload
+                        const decodedPayload = atob(payload); // 使用 atob 解码 payload
+                        const payloadObject = JSON.parse(decodedPayload); // 将解码后的 payload 转换为对象
+                        if (payloadObject && payloadObject.username) {
+                            return payloadObject.username; // 返回从 payload 中提取的用户名
+                        } else {
+                            console.error("Invalid JWT token payload: Missing username field");
+                            return null; // 返回 null 表示无效的令牌
+                        }
+                    } catch (error) {
+                        console.error("Error decoding JWT token payload:", error);
+                        return null; // 返回 null 表示无效的令牌
+                    }
+                }
+                return null; // 返回 null 表示未找到对应的 cookie 或令牌
+            }
+
+
+            function logout() {
+                // 清除 cookie
+                document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+                // 刷新页面
+                window.location.reload();
+            }
+
+            function displayFileName(input) {
+                const fileLabel = document.getElementById('fileLabel');
+                fileLabel.textContent = input.files.length > 0 ? input.files.length + '个文件' : '未选择文件';
+            }
+    
+            function getToken() {
+                const cookies = document.cookie.split(';');
+                for (const cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'access_token') {
+                        return value;
+                    }
+                }
+                return null;
+            }
+            function uploadFile() {
+                const uploadForm = document.getElementById('uploadForm');
+                const formData = new FormData(uploadForm);
+                const progressDisplay = document.getElementById('progress-display');
+
+                // 获取 JWT 令牌
+                const token = getToken();
+
+                    // 将 JWT 令牌设置到请求头中
+                const headers = {
+                    'Authorization': `Bearer ${token}`
+                };
+                // 显示进度
+                progressDisplay.style.display = 'block';
+                progressDisplay.textContent = '0 KB/0 KB (0 KB/s)';
+
+                const xhr = new XMLHttpRequest();
+                let startTime = new Date().getTime(); // 记录开始上传时间
+
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        let total = e.total; // 总文件大小
+                        let loaded = e.loaded; // 已上传文件大小
+
+                        let unit = 'KB';
+                        let divisor = 1024;
+
+                        if (total > 1024 * 1024) {
+                            unit = 'MB';
+                            divisor = 1024 * 1024;
+                        } else if (total > 1024 * 1024 * 1024) {
+                            unit = 'GB';
+                            divisor = 1024 * 1024 * 1024;
+                        } else if (total > 1024 * 1024 * 1024 * 1024) {
+                            unit = 'TB';
+                            divisor = 1024 * 1024 * 1024 * 1024;
+                        }
+
+                        total /= divisor;
+                        loaded /= divisor;
+
+                        const currentTime = new Date().getTime(); // 获取当前时间
+                        const elapsedTime = (currentTime - startTime) / 1000; // 计算已经过的时间（秒）
+
+                        const speed = (loaded / elapsedTime).toFixed(2); // 计算上传速度（单位：KB/s）
+
+                        progressDisplay.textContent = `${loaded.toFixed(2)} ${unit}/${total.toFixed(2)} ${unit} (${speed} KB/s)`;
+                    }
+                }
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            const response = JSON.parse(xhr.responseText);
+                            alert(response.message); // 使用浏览器自带的提示框
+                            updateFileList();
+                        } else {
+                            console.error('Error uploading file:', xhr.statusText);
+                        }
+
+                        // 重置进度显示
+                        progressDisplay.style.display = 'none';
+                    }
+                };
+
+                xhr.open('POST', '/upload', true);
+                    // 设置请求头
+                Object.keys(headers).forEach(key => {
+                    xhr.setRequestHeader(key, headers[key]);
+                });
+
+                xhr.send(formData);
+            }
+
+        </script>
+
+
+</body>
+<style>
+    #style-4::-webkit-scrollbar-track
+    {
+	    -webkit-box-shadow: inset 0 0 6px #6d5513;
+	    background-color: #ffbb00;
+    }
+
+    #style-4::-webkit-scrollbar
+    {    
+	    width: 10px;
+	    background-color: #F5F5F5;
+    }
+
+    #style-4::-webkit-scrollbar-thumb
+    {
+        background-color: #ebebeb;
+	    -webkit-box-shadow: inset 0 0 6px #f3f3f3;
+    }
+</style>
+</html>
