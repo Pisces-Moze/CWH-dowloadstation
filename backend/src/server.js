@@ -7,6 +7,7 @@ import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
+import http from 'http'
 
 // 路由
 import authRoutes from './routes/auth.js'
@@ -17,6 +18,7 @@ import profileRoutes from './routes/profile.js'
 // 中间件
 import { errorHandler } from './middleware/errorHandler.js'
 import db from './config/database.js'
+import { initializeSocket, getOnlineUsers, getUserStatus } from './utils/socket.js'
 
 dotenv.config()
 
@@ -31,7 +33,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173", "ws://localhost:3000", "ws://localhost:5173"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
@@ -90,6 +92,16 @@ app.use('/api/files', fileRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/profile', profileRoutes)
 
+// 在线状态 API
+app.get('/api/users/online', (req, res) => {
+  res.json({ users: getOnlineUsers() })
+})
+
+app.get('/api/users/:userId/status', (req, res) => {
+  const status = getUserStatus(parseInt(req.params.userId))
+  res.json({ userId: req.params.userId, status })
+})
+
 // 健康检查
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -114,24 +126,17 @@ if (fs.existsSync(frontendDistPath)) {
 // 错误处理
 app.use(errorHandler)
 
+// 创建 HTTP 服务器
+const server = http.createServer(app)
+
+// 初始化 WebSocket
+initializeSocket(server)
+
 // 启动服务器
-if (process.env.NODE_ENV === 'production' && process.env.SSL_KEY_PATH && process.env.SSL_CERT_PATH) {
-  // HTTPS
-  import('https').then(https => {
-    const options = {
-      key: fs.readFileSync(process.env.SSL_KEY_PATH),
-      cert: fs.readFileSync(process.env.SSL_CERT_PATH)
-    }
-    https.createServer(options, app).listen(PORT, () => {
-      console.log(`🔒 HTTPS Server running on port ${PORT}`)
-    })
-  })
-} else {
-  // HTTP
-  app.listen(PORT, () => {
-    console.log(`🚀 HTTP Server running on port ${PORT}`)
-    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`)
-  })
-}
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🔌 WebSocket enabled`)
+})
 
 export default app

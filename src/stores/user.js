@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../api/request'
+import { connectSocket, disconnectSocket } from '../utils/socket'
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -57,6 +58,11 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await api.get('/profile/me')
       user.value = response.user
+      
+      // 连接 WebSocket
+      if (user.value?.id) {
+        connectSocket(user.value.id)
+      }
     } catch (error) {
       console.error('获取用户信息失败:', error)
     }
@@ -99,6 +105,9 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     user.value = null
     localStorage.removeItem('token')
+    
+    // 断开 WebSocket
+    disconnectSocket()
   }
 
   return {

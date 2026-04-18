@@ -87,7 +87,17 @@
                       #{{ index + 1 }}
                     </n-tag>
                   </template>
-                  <n-thing :title="user.username">
+                  <n-thing>
+                    <template #avatar>
+                      <UserAvatar
+                        :src="user.avatarUrl"
+                        :user-id="user.id"
+                        :size="40"
+                      />
+                    </template>
+                    <template #header>
+                      {{ user.username }}
+                    </template>
                     <template #description>
                       <n-space>
                         <n-tag size="small">{{ user.fileCount }} 个文件</n-tag>
@@ -187,6 +197,7 @@ import {
   SearchOutline
 } from '@vicons/ionicons5'
 import EditUserModal from '../components/EditUserModal.vue'
+import UserAvatar from '../components/UserAvatar.vue'
 import api from '../api/request'
 
 const router = useRouter()

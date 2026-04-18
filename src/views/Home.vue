@@ -82,7 +82,14 @@
                       type="primary"
                       size="small"
                       @click="router.push(`/profile/${file.userId}`)"
+                      style="display: inline-flex; align-items: center; gap: 4px;"
                     >
+                      <UserAvatar
+                        :src="file.uploaderAvatar"
+                        :user-id="file.userId"
+                        :size="20"
+                        :show-status="true"
+                      />
                       @{{ file.uploader }}
                     </n-button>
                   </n-space>
@@ -145,6 +152,7 @@ import {
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 import FileInfoModal from '../components/FileInfoModal.vue'
+import UserAvatar from '../components/UserAvatar.vue'
 import api from '../api/request'
 
 const router = useRouter()

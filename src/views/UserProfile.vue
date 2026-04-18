@@ -4,9 +4,11 @@
       <n-space vertical size="large">
         <n-card v-if="userProfile">
           <n-space vertical align="center">
-            <n-avatar
+            <UserAvatar
               :size="120"
               :src="userProfile.avatarUrl"
+              :user-id="userProfile.id"
+              :show-status="true"
             />
             <h2>{{ userProfile.username }}</h2>
             <n-tag :type="userProfile.role === '管理员' ? 'error' : 'info'">
@@ -42,9 +44,10 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import {
-  NCard, NSpace, NAvatar, NTag, NText, NDivider, NDescriptions,
+  NCard, NSpace, NTag, NText, NDivider, NDescriptions,
   NDescriptionsItem, NSpin, NEmpty, useMessage
 } from 'naive-ui'
+import UserAvatar from '../components/UserAvatar.vue'
 import api from '../api/request'
 
 const route = useRoute()

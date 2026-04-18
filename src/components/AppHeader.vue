@@ -38,10 +38,11 @@
           <n-badge :value="userStore.storagePercent + '%'" :type="storageType">
             <n-button circle @click="router.push('/profile')">
               <template #icon>
-                <n-avatar
+                <UserAvatar
                   v-if="userStore.avatarUrl"
                   :src="userStore.avatarUrl"
-                  size="small"
+                  :user-id="userStore.user?.id"
+                  :size="28"
                 />
                 <n-icon v-else><PersonOutline /></n-icon>
               </template>
@@ -71,7 +72,7 @@
 import { computed, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  NButton, NSpace, NIcon, NAvatar, NDropdown, NBadge,
+  NButton, NSpace, NIcon, NDropdown, NBadge,
   useDialog
 } from 'naive-ui'
 import {
@@ -85,6 +86,7 @@ import {
   LogOutOutline
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
+import UserAvatar from './UserAvatar.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

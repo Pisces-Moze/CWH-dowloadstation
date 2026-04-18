@@ -6,10 +6,11 @@
         <n-space vertical size="large">
           <!-- 头像 -->
           <n-space align="center">
-            <n-avatar
+            <UserAvatar
               :size="100"
               :src="userStore.avatarUrl"
-              :fallback-src="defaultAvatar"
+              :user-id="userStore.user?.id"
+              :show-status="true"
             />
             <n-upload
               :action="uploadAvatarUrl"
@@ -160,6 +161,7 @@ import {
 } from 'naive-ui'
 import { CameraOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
+import UserAvatar from '../components/UserAvatar.vue'
 
 const message = useMessage()
 const userStore = useUserStore()
