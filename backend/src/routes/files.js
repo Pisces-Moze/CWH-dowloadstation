@@ -84,22 +84,85 @@ router.post('/upload', authMiddleware, upload.single('file'), checkStorageQuota,
 // 获取公共文件列表
 router.get('/files', async (req, res, next) => {
   try {
+    const page = parseInt(req.query.page) || 1
+    const pageSize = parseInt(req.query.pageSize) || 20
+    const sortBy = req.query.sortBy || 'newest'
+    const search = req.query.search || ''
+    const offset = (page - 1) * pageSize
+
+    // 构建排序条件
+    let orderBy = 'f.created_at DESC'
+    if (sortBy === 'downloads') {
+      orderBy = 'f.downloads DESC, f.created_at DESC'
+    } else if (sortBy === 'size') {
+      orderBy = 'f.size DESC, f.created_at DESC'
+    }
+
+    // 构建搜索条件
+    let searchCondition = ''
+    let searchParams = []
+    if (search) {
+      searchCondition = 'AND (f.original_name LIKE ? OR u.username LIKE ?)'
+      searchParams = [`%${search}%`, `%${search}%`]
+    }
+
+    // 获取总数
+    const [countResult] = await db.query(`
+      SELECT COUNT(*) as total
+      FROM files f
+      JOIN users u ON f.user_id = u.id
+      WHERE f.is_private = FALSE ${searchCondition}
+    `, searchParams)
+
+    const total = countResult[0].total
+    const totalPages = Math.ceil(total / pageSize)
+
+    // 获取文件列表
     const [files] = await db.query(`
       SELECT 
         f.id,
+        f.filename,
         f.original_name as name,
         f.size,
+        f.mime_type as mimeType,
         f.downloads,
         f.created_at as uploadTime,
-        u.username as uploader
+        f.user_id as userId,
+        u.username as uploader,
+        u.avatar_file_id as uploaderAvatarFileId
       FROM files f
       JOIN users u ON f.user_id = u.id
-      WHERE f.is_private = FALSE
-      ORDER BY f.created_at DESC
-      LIMIT 100
+      WHERE f.is_private = FALSE ${searchCondition}
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `, [...searchParams, pageSize, offset])
+
+    // 获取下载排名
+    const [rankings] = await db.query(`
+      SELECT id, 
+        RANK() OVER (ORDER BY downloads DESC) as downloadRank
+      FROM files
+      WHERE is_private = FALSE AND downloads > 0
     `)
 
-    res.json({ success: true, files })
+    const rankMap = new Map(rankings.map(r => [r.id, r.downloadRank]))
+
+    // 添加排名和头像URL
+    const filesWithRank = files.map(file => ({
+      ...file,
+      downloadRank: rankMap.get(file.id) || null,
+      uploaderAvatar: file.uploaderAvatarFileId 
+        ? `/api/files/download/${file.uploaderAvatarFileId}` 
+        : null
+    }))
+
+    res.json({ 
+      success: true, 
+      files: filesWithRank,
+      total,
+      totalPages,
+      currentPage: page
+    })
   } catch (error) {
     next(error)
   }

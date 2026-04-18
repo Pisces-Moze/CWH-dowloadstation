@@ -127,7 +127,7 @@ router.post('/register',
 
 // 登录
 router.post('/login',
-  body('username').trim().notEmpty().withMessage('请输入用户名'),
+  body('email').trim().notEmpty().withMessage('请输入邮箱或用户名'),
   body('password').notEmpty().withMessage('请输入密码'),
   async (req, res, next) => {
     try {
@@ -136,16 +136,16 @@ router.post('/login',
         throw new AppError(errors.array()[0].msg, 400)
       }
 
-      const { username, password } = req.body
+      const { email, password } = req.body
 
-      // 查找用户
+      // 查找用户（支持邮箱或用户名登录）
       const [users] = await db.query(
-        'SELECT id, username, password FROM users WHERE username = ?',
-        [username]
+        'SELECT id, username, email, password FROM users WHERE email = ? OR username = ?',
+        [email, email]
       )
 
       if (users.length === 0) {
-        throw new AppError('用户名或密码错误', 401)
+        throw new AppError('邮箱/用户名或密码错误', 401)
       }
 
       const user = users[0]
@@ -153,7 +153,7 @@ router.post('/login',
       // 验证密码
       const isValid = await bcrypt.compare(password, user.password)
       if (!isValid) {
-        throw new AppError('用户名或密码错误', 401)
+        throw new AppError('邮箱/用户名或密码错误', 401)
       }
 
       // 生成 JWT
