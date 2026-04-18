@@ -12,7 +12,8 @@
     "vue-router": "^4.2.0",
     "pinia": "^2.1.0",
     "axios": "^1.6.0",
-    "naive-ui": "^2.38.0"
+    "naive-ui": "^2.38.0",
+    "@vicons/ionicons5": "^0.12.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

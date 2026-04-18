@@ -1,100 +1,204 @@
 <template>
   <div class="home-container">
-    <n-layout>
-      <n-layout-header class="header">
-        <div class="header-content">
-          <h1>🐧 智享云阁 CWH</h1>
+    <n-space vertical size="large">
+      <!-- 欢迎横幅 -->
+      <n-card class="welcome-banner">
+        <n-space vertical align="center">
+          <n-icon size="64" color="#667eea">
+            <CloudDownloadOutline />
+          </n-icon>
+          <h1>欢迎来到 CWH 下载站</h1>
+          <p>企业级文件管理系统 - 安全、快速、可靠</p>
+          <n-space v-if="!userStore.isLoggedIn">
+            <n-button type="primary" size="large" @click="router.push('/register')">
+              立即注册
+            </n-button>
+            <n-button size="large" @click="router.push('/login')">
+              登录
+            </n-button>
+          </n-space>
+        </n-space>
+      </n-card>
+
+      <!-- 搜索和筛选 -->
+      <n-card>
+        <n-space vertical>
+          <n-input
+            v-model:value="searchKeyword"
+            placeholder="搜索文件..."
+            size="large"
+            clearable
+            @update:value="handleSearch"
+          >
+            <template #prefix>
+              <n-icon><SearchOutline /></n-icon>
+            </template>
+          </n-input>
+
           <n-space>
-            <n-button v-if="!userStore.isLoggedIn" @click="router.push('/login')">登录</n-button>
-            <n-button v-if="!userStore.isLoggedIn" @click="router.push('/signup')" type="primary">注册</n-button>
-            <n-button v-if="userStore.isLoggedIn" @click="router.push('/upload')" type="primary">上传文件</n-button>
-            <n-button v-if="userStore.isLoggedIn" @click="router.push('/control')">控制面板</n-button>
-            <n-button v-if="userStore.isLoggedIn" @click="handleLogout" type="error">退出</n-button>
-          </n-space>
-        </div>
-      </n-layout-header>
-
-      <n-layout-content class="content">
-        <div class="welcome-section">
-          <h2>欢迎来到智享云阁</h2>
-          <p>一个免费的公益文件分享平台</p>
-        </div>
-
-        <n-card title="📁 文件列表" class="file-list-card">
-          <n-space vertical>
-            <n-input v-model:value="searchQuery" placeholder="搜索文件..." clearable>
-              <template #prefix>
-                <n-icon><SearchOutline /></n-icon>
-              </template>
-            </n-input>
-
-            <n-data-table
-              :columns="columns"
-              :data="filteredFiles"
-              :loading="loading"
-              :pagination="pagination"
+            <n-select
+              v-model:value="sortBy"
+              :options="sortOptions"
+              style="width: 150px"
+              @update:value="loadFiles"
             />
+            <n-button @click="loadFiles">
+              <template #icon>
+                <n-icon><RefreshOutline /></n-icon>
+              </template>
+              刷新
+            </n-button>
           </n-space>
-        </n-card>
-      </n-layout-content>
+        </n-space>
+      </n-card>
 
-      <n-layout-footer class="footer">
-        <p>© 2026 智享云阁 CWH - 公益下载站</p>
-      </n-layout-footer>
-    </n-layout>
+      <!-- 文件列表 -->
+      <n-card title="公共文件">
+        <n-spin :show="loading">
+          <n-empty v-if="files.length === 0" description="暂无文件" />
+          <n-list v-else hoverable clickable>
+            <n-list-item v-for="file in files" :key="file.id">
+              <template #prefix>
+                <n-icon size="32" :color="getFileIconColor(file.mimeType)">
+                  <component :is="getFileIcon(file.mimeType)" />
+                </n-icon>
+              </template>
+
+              <n-thing :title="file.name">
+                <template #description>
+                  <n-space>
+                    <n-tag size="small" type="info">{{ file.size }}</n-tag>
+                    <n-tag size="small" type="success">
+                      <template #icon>
+                        <n-icon><DownloadOutline /></n-icon>
+                      </template>
+                      {{ file.downloads }} 次下载
+                    </n-tag>
+                    <n-tag v-if="file.downloadRank" size="small" type="warning">
+                      排名 #{{ file.downloadRank }}
+                    </n-tag>
+                    <n-button
+                      text
+                      type="primary"
+                      size="small"
+                      @click="router.push(`/profile/${file.userId}`)"
+                    >
+                      @{{ file.uploader }}
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-thing>
+
+              <template #suffix>
+                <n-space>
+                  <n-button
+                    secondary
+                    @click="showFileInfo(file)"
+                  >
+                    详情
+                  </n-button>
+                  <n-button
+                    type="primary"
+                    @click="downloadFile(file)"
+                  >
+                    <template #icon>
+                      <n-icon><DownloadOutline /></n-icon>
+                    </template>
+                    下载
+                  </n-button>
+                </n-space>
+              </template>
+            </n-list-item>
+          </n-list>
+
+          <!-- 分页 -->
+          <n-pagination
+            v-if="totalPages > 1"
+            v-model:page="currentPage"
+            :page-count="totalPages"
+            style="margin-top: 20px; justify-content: center"
+            @update:page="loadFiles"
+          />
+        </n-spin>
+      </n-card>
+    </n-space>
+
+    <!-- 文件详情弹窗 -->
+    <FileInfoModal
+      v-model:show="showFileInfoModal"
+      :file="selectedFile"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  NCard, NSpace, NIcon, NButton, NInput, NSelect, NSpin, NEmpty,
+  NList, NListItem, NThing, NTag, NPagination, useMessage
+} from 'naive-ui'
+import {
+  CloudDownloadOutline, SearchOutline, RefreshOutline,
+  DownloadOutline, DocumentOutline, ImageOutline,
+  VideocamOutline, MusicalNotesOutline, ArchiveOutline
+} from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
-import { NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NCard, NButton, NSpace, NDataTable, NInput, NIcon, useMessage } from 'naive-ui'
-import { SearchOutline } from '@vicons/ionicons5'
+import FileInfoModal from '../components/FileInfoModal.vue'
 import api from '../api/request'
 
 const router = useRouter()
-const userStore = useUserStore()
 const message = useMessage()
+const userStore = useUserStore()
 
-const searchQuery = ref('')
-const files = ref([])
 const loading = ref(false)
+const files = ref([])
+const searchKeyword = ref('')
+const sortBy = ref('downloads')
+const currentPage = ref(1)
+const totalPages = ref(1)
+const pageSize = 20
 
-const pagination = {
-  pageSize: 10
-}
+const showFileInfoModal = ref(false)
+const selectedFile = ref(null)
 
-const columns = [
-  { title: '文件名', key: 'name' },
-  { title: '大小', key: 'size' },
-  { title: '上传时间', key: 'uploadTime' },
-  {
-    title: '操作',
-    key: 'actions',
-    render: (row) => h(
-      NButton,
-      {
-        size: 'small',
-        onClick: () => downloadFile(row)
-      },
-      { default: () => '下载' }
-    )
-  }
+const sortOptions = [
+  { label: '下载量', value: 'downloads' },
+  { label: '最新上传', value: 'newest' },
+  { label: '文件大小', value: 'size' }
 ]
 
-const filteredFiles = computed(() => {
-  if (!searchQuery.value) return files.value
-  return files.value.filter(file => 
-    file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
-})
+function getFileIcon(mimeType) {
+  if (!mimeType) return DocumentOutline
+  if (mimeType.startsWith('image/')) return ImageOutline
+  if (mimeType.startsWith('video/')) return VideocamOutline
+  if (mimeType.startsWith('audio/')) return MusicalNotesOutline
+  if (mimeType.includes('zip') || mimeType.includes('rar')) return ArchiveOutline
+  return DocumentOutline
+}
+
+function getFileIconColor(mimeType) {
+  if (!mimeType) return '#666'
+  if (mimeType.startsWith('image/')) return '#52c41a'
+  if (mimeType.startsWith('video/')) return '#1890ff'
+  if (mimeType.startsWith('audio/')) return '#722ed1'
+  if (mimeType.includes('zip') || mimeType.includes('rar')) return '#fa8c16'
+  return '#666'
+}
 
 async function loadFiles() {
   loading.value = true
   try {
-    const response = await api.get('/files')
+    const response = await api.get('/files', {
+      params: {
+        page: currentPage.value,
+        pageSize,
+        sortBy: sortBy.value,
+        search: searchKeyword.value
+      }
+    })
     files.value = response.files || []
+    totalPages.value = response.totalPages || 1
   } catch (error) {
     message.error('加载文件列表失败')
   } finally {
@@ -102,14 +206,23 @@ async function loadFiles() {
   }
 }
 
-function downloadFile(file) {
-  window.open(`/api/download/${file.name}`, '_blank')
+function handleSearch() {
+  currentPage.value = 1
+  loadFiles()
 }
 
-function handleLogout() {
-  userStore.logout()
-  message.success('已退出登录')
-  router.push('/')
+function showFileInfo(file) {
+  selectedFile.value = file
+  showFileInfoModal.value = true
+}
+
+async function downloadFile(file) {
+  try {
+    window.open(`/api/files/download/${file.filename}`, '_blank')
+    message.success('开始下载')
+  } catch (error) {
+    message.error('下载失败')
+  }
 }
 
 onMounted(() => {
@@ -119,54 +232,24 @@ onMounted(() => {
 
 <style scoped>
 .home-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.header {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.header h1 {
-  margin: 0;
-  color: #667eea;
-}
-
-.content {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 2rem;
-}
-
-.welcome-section {
-  text-align: center;
-  color: white;
-  margin-bottom: 2rem;
-}
-
-.welcome-section h2 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.file-list-card {
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.footer {
-  background: rgba(0, 0, 0, 0.8);
+.welcome-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   text-align: center;
-  padding: 1rem;
+}
+
+.welcome-banner h1 {
+  font-size: 32px;
+  margin: 16px 0;
+}
+
+.welcome-banner p {
+  font-size: 16px;
+  opacity: 0.9;
+  margin-bottom: 24px;
 }
 </style>
