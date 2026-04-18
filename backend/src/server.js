@@ -74,7 +74,7 @@ app.use(async (req, res, next) => {
   }
 })
 
-// 路由
+// API 路由
 app.use('/api/auth', authRoutes)
 app.use('/api/files', fileRoutes)
 app.use('/api/admin', adminRoutes)
@@ -84,6 +84,22 @@ app.use('/api/profile', profileRoutes)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// 静态文件服务（前端）
+const frontendDistPath = path.join(__dirname, '../../dist')
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath))
+  
+  // SPA 路由支持 - 所有非 API 请求返回 index.html
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(frontendDistPath, 'index.html'))
+    }
+  })
+  console.log('✅ 前端静态文件已加载')
+} else {
+  console.log('⚠️  前端未构建，请运行: npm run build:frontend')
+}
 
 // 错误处理
 app.use(errorHandler)
