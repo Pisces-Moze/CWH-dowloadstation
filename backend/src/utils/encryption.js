@@ -44,3 +44,18 @@ export function generateShareCode() {
 export function isValidShareCode(code) {
   return /^[a-f0-9]{32}$/.test(code)
 }
+
+// 计算加密文件的 MD5（解密后的内容）
+export async function calculateFileMD5(filePath, iv) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5')
+    const decryptStream = createDecryptStream(iv)
+    const fileStream = fs.createReadStream(filePath)
+
+    fileStream.pipe(decryptStream).on('data', (chunk) => {
+      hash.update(chunk)
+    }).on('end', () => {
+      resolve(hash.digest('hex'))
+    }).on('error', reject)
+  })
+}

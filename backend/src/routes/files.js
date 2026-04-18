@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 import db from '../config/database.js'
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js'
 import { AppError } from '../middleware/errorHandler.js'
-import { encryptFile, createDecryptStream, generateShareCode, isValidShareCode } from '../utils/encryption.js'
+import { encryptFile, createDecryptStream, generateShareCode, isValidShareCode, calculateFileMD5 } from '../utils/encryption.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,9 +49,12 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res, n
     // 重命名加密文件
     fs.renameSync(encryptedPath, filePath)
 
+    // 计算 MD5
+    const md5 = await calculateFileMD5(filePath, iv)
+
     await db.query(
-      'INSERT INTO files (user_id, filename, original_name, size, mime_type, is_private, encryption_iv) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.user.id, filename, originalname, size, mimetype, isPrivate, iv]
+      'INSERT INTO files (user_id, filename, original_name, size, mime_type, is_private, encryption_iv, md5) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.user.id, filename, originalname, size, mimetype, isPrivate, iv, md5]
     )
 
     res.json({
@@ -60,7 +63,8 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res, n
       file: {
         name: originalname,
         size,
-        isPrivate
+        isPrivate,
+        md5
       }
     })
   } catch (error) {
@@ -319,6 +323,60 @@ router.get('/download-ref/:refId', authMiddleware, async (req, res, next) => {
 
     const decryptStream = createDecryptStream(file.encryption_iv)
     fs.createReadStream(filePath).pipe(decryptStream).pipe(res)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 获取文件详细信息
+router.get('/file-info/:fileId', optionalAuthMiddleware, async (req, res, next) => {
+  try {
+    const { fileId } = req.params
+
+    const [files] = await db.query(`
+      SELECT 
+        f.id,
+        f.user_id,
+        f.original_name as name,
+        f.size,
+        f.mime_type as mimeType,
+        f.downloads,
+        f.md5,
+        f.created_at as uploadTime,
+        f.is_private as isPrivate,
+        u.username as uploader
+      FROM files f
+      JOIN users u ON f.user_id = u.id
+      WHERE f.id = ?
+    `, [fileId])
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    const file = files[0]
+
+    // 私人文件需要权限验证
+    if (file.isPrivate) {
+      if (!req.user || req.user.id !== file.user_id) {
+        throw new AppError('无权查看此文件', 403)
+      }
+    }
+
+    res.json({
+      success: true,
+      file: {
+        name: file.name,
+        size: formatBytes(file.size),
+        sizeBytes: file.size,
+        mimeType: file.mimeType,
+        downloads: file.downloads,
+        md5: file.md5,
+        uploadTime: file.uploadTime,
+        uploader: file.uploader,
+        isPrivate: file.isPrivate
+      }
+    })
   } catch (error) {
     next(error)
   }

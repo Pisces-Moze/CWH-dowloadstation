@@ -134,11 +134,33 @@ Response: {
 }
 ```
 
+### 获取文件详细信息
+```
+GET /api/files/file-info/:fileId
+Headers: Authorization: Bearer <token> (私人文件必需)
+
+Response: {
+  "success": true,
+  "file": {
+    "name": "文件名.txt",
+    "size": "1.5 MB",
+    "sizeBytes": 1572864,
+    "mimeType": "text/plain",
+    "downloads": 42,
+    "md5": "5d41402abc4b2a76b9719d911017c592",
+    "uploadTime": "2026-04-18T04:00:00.000Z",
+    "uploader": "username",
+    "isPrivate": false
+  }
+}
+```
+
 ## 数据库变更
 
 ### files 表新增字段
 - `is_private` BOOLEAN - 是否私人文件
 - `encryption_iv` VARCHAR(32) - 加密 IV
+- `md5` VARCHAR(32) - 文件 MD5（解密后的内容）
 
 ### 新增 share_links 表
 - `id` - 主键
