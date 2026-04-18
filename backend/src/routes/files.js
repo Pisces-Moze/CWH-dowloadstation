@@ -116,18 +116,19 @@ router.get('/private-files', authMiddleware, async (req, res, next) => {
       ORDER BY created_at DESC
     `, [req.user.id])
 
-    // 获取引用文件
+    // 获取引用文件（包括失效的）
     const [refFiles] = await db.query(`
       SELECT 
         fr.id,
-        COALESCE(fr.reference_name, f.original_name) as name,
-        f.size,
+        COALESCE(fr.reference_name, f.original_name, '（已失效）') as name,
+        COALESCE(f.size, 0) as size,
         fr.downloads,
         fr.created_at as uploadTime,
         'reference' as type,
-        f.id as originalFileId
+        f.id as originalFileId,
+        CASE WHEN f.id IS NULL THEN TRUE ELSE FALSE END as isInvalid
       FROM file_references fr
-      JOIN files f ON fr.original_file_id = f.id
+      LEFT JOIN files f ON fr.original_file_id = f.id
       WHERE fr.user_id = ?
       ORDER BY fr.created_at DESC
     `, [req.user.id])
@@ -590,6 +591,38 @@ router.delete('/reference/:refId', authMiddleware, async (req, res, next) => {
     await db.query('DELETE FROM file_references WHERE id = ?', [refId])
 
     res.json({ success: true, message: '已从私人空间移除（原文件保留）' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 批量清理失效引用
+router.post('/clean-invalid-references', authMiddleware, async (req, res, next) => {
+  try {
+    // 查找所有失效的引用（原文件已被删除）
+    const [invalidRefs] = await db.query(`
+      SELECT fr.id
+      FROM file_references fr
+      LEFT JOIN files f ON fr.original_file_id = f.id
+      WHERE fr.user_id = ? AND f.id IS NULL
+    `, [req.user.id])
+
+    if (invalidRefs.length === 0) {
+      return res.json({ success: true, message: '没有失效的引用', count: 0 })
+    }
+
+    // 删除所有失效引用
+    await db.query(`
+      DELETE fr FROM file_references fr
+      LEFT JOIN files f ON fr.original_file_id = f.id
+      WHERE fr.user_id = ? AND f.id IS NULL
+    `, [req.user.id])
+
+    res.json({ 
+      success: true, 
+      message: `已清理 ${invalidRefs.length} 个失效引用`,
+      count: invalidRefs.length
+    })
   } catch (error) {
     next(error)
   }
