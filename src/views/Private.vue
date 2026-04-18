@@ -68,7 +68,7 @@
                 </template>
                 <template #description>
                   <n-space>
-                    <n-tag size="small" type="info">{{ file.size }}</n-tag>
+                    <n-tag size="small" type="info">{{ formatBytes(file.size) }}</n-tag>
                     <n-text depth="3">{{ formatDate(file.uploadTime) }}</n-text>
                   </n-space>
                 </template>
@@ -196,7 +196,7 @@ function formatDate(dateString) {
 async function loadFiles() {
   loading.value = true
   try {
-    const response = await api.get('/files/private')
+    const response = await api.get('/private-files')
     files.value = response.files || []
     await userStore.fetchProfile() // 更新存储使用情况
   } catch (error) {

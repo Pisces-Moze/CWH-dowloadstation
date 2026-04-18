@@ -220,7 +220,7 @@ router.get('/private-files', authMiddleware, async (req, res, next) => {
       files: allFiles,
       stats: {
         totalFiles: stats[0].totalFiles || 0,
-        totalSize: formatBytes(stats[0].totalSize || 0)
+        totalSize: stats[0].totalSize || 0
       }
     })
   } catch (error) {

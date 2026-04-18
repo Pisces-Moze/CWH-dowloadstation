@@ -13,7 +13,7 @@
         </n-descriptions-item>
 
         <n-descriptions-item label="文件大小">
-          {{ fileInfo.size }}
+          {{ formatBytes(fileInfo.size) }}
         </n-descriptions-item>
 
         <n-descriptions-item label="文件类型">
@@ -144,6 +144,14 @@ function formatDate(dateString) {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleString('zh-CN')
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
 function handleDownload() {

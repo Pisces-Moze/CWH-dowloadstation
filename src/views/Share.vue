@@ -110,7 +110,7 @@ async function loadShareInfo() {
   error.value = ''
   try {
     const shareCode = route.params.code
-    const response = await api.get(`/files/share/${shareCode}`)
+    const response = await api.get(`/s/${shareCode}`)
     
     if (response.needPassword) {
       needPassword.value = true
@@ -131,7 +131,7 @@ async function handleVerify() {
   error.value = ''
   try {
     const shareCode = route.params.code
-    const response = await api.post(`/files/share/${shareCode}/verify`, {
+    const response = await api.post(`/s/${shareCode}/verify`, {
       password: formData.value.password
     })
     
