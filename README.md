@@ -43,7 +43,9 @@
 - MySQL >= 8.0
 - npm 或 yarn
 
-### 1. 克隆项目
+### 一键启动（推荐）
+
+#### 1. 克隆项目
 
 ```bash
 git clone https://github.com/Pisces-Moze/CWH-dowloadstation.git
@@ -51,14 +53,7 @@ cd CWH-dowloadstation
 git checkout v2-refactor
 ```
 
-### 2. 安装依赖
-
-```bash
-cd backend
-npm install
-```
-
-### 3. 配置数据库
+#### 2. 配置数据库
 
 创建 MySQL 数据库：
 
@@ -66,7 +61,7 @@ npm install
 CREATE DATABASE cwh_download CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 4. 配置环境变量
+#### 3. 配置环境变量
 
 创建 `backend/.env` 文件：
 
@@ -89,9 +84,6 @@ NODE_ENV=development
 # 文件上传配置
 UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=104857600
-
-# CORS 配置（可选）
-CORS_ORIGIN=http://localhost:5173
 ```
 
 **生成安全的 JWT 密钥：**
@@ -100,48 +92,149 @@ CORS_ORIGIN=http://localhost:5173
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
-### 5. 启动服务
+#### 4. 安装依赖并启动
 
 ```bash
-npm run dev
+cd backend
+npm install
+npm run dev:full
 ```
 
-首次启动时会自动：
-- 创建所有数据库表
-- 创建默认管理员账户
-- 在控制台显示管理员密码
+这会自动：
+1. ✅ 构建前端（生成 dist/ 目录）
+2. ✅ 启动后端服务器
+3. ✅ 后端同时提供前端静态文件服务
+4. ✅ 创建所有数据库表
+5. ✅ 创建默认管理员账户
+6. ✅ 在控制台显示管理员密码
 
 **⚠️ 重要：请立即登录并修改默认管理员密码！**
 
-### 6. 访问系统
+#### 5. 访问系统
 
-- 后端 API: http://localhost:3000
-- 管理员账户: `admin`
-- 密码: 控制台显示的随机密码
+- **所有功能：** http://localhost:3000
+- **管理员账户：** `admin`
+- **密码：** 控制台显示的随机密码
+
+---
+
+### 分离启动（开发调试）
+
+如果需要前端热重载，可以分别启动：
+
+#### 终端 1 - 后端
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+#### 终端 2 - 前端
+
+```bash
+# 在项目根目录
+npm install
+npm run dev
+```
+
+**访问地址：**
+- 前端：http://localhost:5173
+- 后端：http://localhost:3000
+
+---
+
+### 可用命令
+
+#### 后端命令（backend/）
+
+```bash
+# 开发模式（仅后端）
+npm run dev
+
+# 开发模式（前端+后端）
+npm run dev:full
+
+# 生产模式（仅后端）
+npm start
+
+# 生产模式（前端+后端）
+npm run start:full
+
+# 仅构建前端
+npm run build:frontend
+```
+
+#### 前端命令（项目根目录）
+
+```bash
+# 开发模式（热重载）
+npm run dev
+
+# 构建生产版本
+npm run build
+
+# 预览构建结果
+npm run preview
+```
 
 ## 📦 项目结构
 
 ```
-backend/
-├── src/
-│   ├── config/
-│   │   └── database.js          # 数据库配置和初始化
-│   ├── middleware/
-│   │   ├── auth.js              # JWT 认证中间件
-│   │   ├── permission.js        # 权限验证中间件
-│   │   └── errorHandler.js      # 错误处理中间件
-│   ├── routes/
-│   │   ├── auth.js              # 认证路由（注册/登录）
-│   │   ├── files.js             # 文件路由（上传/下载/分享）
-│   │   ├── admin.js             # 管理员路由（统计/用户管理）
-│   │   └── profile.js           # 个人资料路由
-│   ├── utils/
-│   │   └── encryption.js        # 文件加密工具
-│   └── server.js                # 服务器入口
-├── uploads/                      # 文件存储目录（自动创建）
-├── .env                          # 环境变量配置
-├── .env.example                  # 环境变量示例
-└── package.json
+CWH-dowloadstation/
+├── backend/                    # 后端代码
+│   ├── src/
+│   │   ├── config/
+│   │   │   └── database.js      # 数据库配置和初始化
+│   │   ├── middleware/
+│   │   │   ├── auth.js          # JWT 认证中间件
+│   │   │   ├── permission.js    # 权限验证中间件
+│   │   │   └── errorHandler.js  # 错误处理中间件
+│   │   ├── routes/
+│   │   │   ├── auth.js          # 认证路由（注册/登录）
+│   │   │   ├── files.js         # 文件路由（上传/下载/分享）
+│   │   │   ├── admin.js         # 管理员路由（统计/用户管理）
+│   │   │   └── profile.js       # 个人资料路由
+│   │   ├── utils/
+│   │   │   ├── encryption.js    # 文件加密工具
+│   │   │   └── email.js         # 邮件发送工具
+│   │   └── server.js            # 服务器入口
+│   ├── uploads/                 # 文件存储目录（自动创建）
+│   ├── .env                     # 环境变量配置
+│   ├── .env.example             # 环境变量示例
+│   └── package.json
+├── src/                        # 前端代码
+│   ├── api/
+│   │   └── request.js           # API 请求封装
+│   ├── components/              # Vue 组件
+│   │   ├── AppHeader.vue
+│   │   ├── AppFooter.vue
+│   │   ├── FileInfoModal.vue
+│   │   ├── ShareModal.vue
+│   │   ├── UploadModal.vue
+│   │   └── EditUserModal.vue
+│   ├── stores/                  # Pinia 状态管理
+│   │   └── user.js
+│   ├── views/                   # 页面组件
+│   │   ├── Home.vue
+│   │   ├── Login.vue
+│   │   ├── Register.vue
+│   │   ├── Private.vue
+│   │   ├── Profile.vue
+│   │   ├── UserProfile.vue
+│   │   ├── Admin.vue
+│   │   └── Share.vue
+│   ├── router/
+│   │   └── index.js             # 路由配置
+│   ├── App.vue
+│   └── main.js
+├── .env.example                # 前端环境变量示例
+├── vite.config.js              # Vite 配置
+├── package.json
+├── PRIVATE_SPACE_FEATURE.md    # 私人空间功能文档
+├── ADMIN_USER_SYSTEM.md        # 管理员系统文档
+├── EMAIL_CONFIG.md             # 邮件配置指南
+└── README.md
 ```
 
 ## 🔧 开发指南
@@ -249,31 +342,40 @@ Content-Type: application/json
 
 ## 🚢 生产部署
 
-### 1. 构建前端（如果有）
+### 方法一：一体化部署（推荐）
+
+后端同时提供前端静态文件服务，只需要一个端口。
+
+#### 1. 构建前端
 
 ```bash
-cd frontend
+# 在项目根目录
+npm install
 npm run build
 ```
 
-### 2. 配置生产环境
+这会生成 `dist/` 目录，包含所有前端静态文件。
 
-修改 `.env` 文件：
+#### 2. 配置生产环境
+
+修改 `backend/.env` 文件：
 
 ```env
 NODE_ENV=production
 PORT=3000
 DB_HOST=your_production_db_host
+DB_PASSWORD=your_production_db_password
 # ... 其他生产配置
 ```
 
-### 3. 使用 PM2 部署
+#### 3. 使用 PM2 部署
 
 ```bash
 # 安装 PM2
 npm install -g pm2
 
-# 启动服务
+# 启动服务（一体化模式）
+cd backend
 pm2 start src/server.js --name cwh-download
 
 # 查看日志
@@ -284,12 +386,15 @@ pm2 startup
 pm2 save
 ```
 
-### 4. 使用 Nginx 反向代理
+#### 4. 使用 Nginx 反向代理
 
 ```nginx
 server {
     listen 80;
     server_name your-domain.com;
+
+    # 文件上传大小限制
+    client_max_body_size 100M;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -300,15 +405,82 @@ server {
         proxy_cache_bypass $http_upgrade;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-### 5. 配置 HTTPS（推荐）
+#### 5. 配置 HTTPS（推荐）
 
 ```bash
 # 使用 Certbot 获取免费 SSL 证书
 sudo certbot --nginx -d your-domain.com
+```
+
+---
+
+### 方法二：前后端分离部署
+
+前端和后端分开部署，适用于高并发场景。
+
+#### 1. 构建前端
+
+```bash
+npm run build
+```
+
+#### 2. 部署前端
+
+将 `dist/` 目录上传到静态文件服务器（Nginx/CDN）。
+
+**Nginx 配置：**
+
+```nginx
+server {
+    listen 80;
+    server_name your-frontend-domain.com;
+
+    root /var/www/cwh-download/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+#### 3. 部署后端
+
+```bash
+cd backend
+pm2 start src/server.js --name cwh-download-api
+```
+
+#### 4. 配置前端 API 地址
+
+创建 `.env.production` 文件：
+
+```env
+VITE_API_BASE_URL=https://api.your-domain.com/api
+```
+
+重新构建前端：
+
+```bash
+npm run build
+```
+
+---
+
+### PM2 常用命令
+
+```bash
+pm2 list               # 查看所有进程
+pm2 logs cwh-download   # 查看日志
+pm2 restart cwh-download # 重启服务
+pm2 stop cwh-download   # 停止服务
+pm2 delete cwh-download # 删除服务
+pm2 monit              # 监控资源使用
 ```
 
 ## 🔒 安全建议
@@ -349,6 +521,27 @@ chmod 755 backend/uploads
 - 检查 `.env` 中的 `JWT_SECRET` 是否正确
 - 检查 token 是否过期
 - 检查请求头格式：`Authorization: Bearer <token>`
+
+### 前端构建失败
+
+```bash
+# 清理缓存
+rm -rf node_modules package-lock.json
+npm install
+
+# 重新构建
+npm run build
+```
+
+### 端口被占用
+
+```bash
+# 查找占用端口的进程
+lsof -i :3000
+
+# 结束进程
+kill -9 <PID>
+```
 
 ## 📝 更新日志
 
