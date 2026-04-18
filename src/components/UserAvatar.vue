@@ -3,7 +3,7 @@
     <n-avatar
       :size="size"
       :src="src"
-      :round="round"
+      round
       :style="avatarStyle"
     >
       <template #fallback>
@@ -15,12 +15,10 @@
     <div
       v-if="showStatus"
       class="status-dot"
+      :class="`status-${currentStatus}`"
       :style="{
-        backgroundColor: statusColor,
         width: dotSize + 'px',
-        height: dotSize + 'px',
-        border: `${borderWidth}px solid #fff`,
-        boxShadow: `0 0 0 1px ${statusColor}40`
+        height: dotSize + 'px'
       }"
       :title="statusText"
     />
@@ -41,10 +39,6 @@ const props = defineProps({
   size: {
     type: Number,
     default: 40
-  },
-  round: {
-    type: Boolean,
-    default: true
   },
   userId: {
     type: [Number, String],
@@ -70,11 +64,8 @@ const currentStatus = computed(() => {
   return 'offline'
 })
 
-const statusColor = computed(() => getStatusColor(currentStatus.value))
 const statusText = computed(() => getStatusText(currentStatus.value))
-
-const dotSize = computed(() => Math.max(8, props.size * 0.28))
-const borderWidth = computed(() => Math.max(2, props.size * 0.05))
+const dotSize = computed(() => Math.max(10, props.size * 0.25))
 </script>
 
 <style scoped>
@@ -89,7 +80,66 @@ const borderWidth = computed(() => Math.max(2, props.size * 0.05))
   top: 0;
   right: 0;
   border-radius: 50%;
-  transition: background-color 0.3s ease;
+  border: 2px solid #fff;
   z-index: 1;
+  transition: all 0.3s ease;
+}
+
+/* 在线 - 蓝绿色炫光 */
+.status-online {
+  background: #18a058;
+  box-shadow: 
+    0 0 0 0 rgba(24, 160, 88, 0.4),
+    0 0 8px rgba(24, 160, 88, 0.6),
+    0 0 12px rgba(24, 160, 88, 0.4);
+  animation: pulse-online 2s ease-in-out infinite;
+}
+
+@keyframes pulse-online {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 0 rgba(24, 160, 88, 0.4),
+      0 0 8px rgba(24, 160, 88, 0.6),
+      0 0 12px rgba(24, 160, 88, 0.4);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 3px rgba(24, 160, 88, 0),
+      0 0 12px rgba(24, 160, 88, 0.8),
+      0 0 16px rgba(24, 160, 88, 0.6);
+  }
+}
+
+/* 离开 - 黄色炫光 */
+.status-away {
+  background: #f0a020;
+  box-shadow: 
+    0 0 0 0 rgba(240, 160, 32, 0.4),
+    0 0 8px rgba(240, 160, 32, 0.6),
+    0 0 12px rgba(240, 160, 32, 0.4);
+  animation: pulse-away 2s ease-in-out infinite;
+}
+
+@keyframes pulse-away {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 0 rgba(240, 160, 32, 0.4),
+      0 0 8px rgba(240, 160, 32, 0.6),
+      0 0 12px rgba(240, 160, 32, 0.4);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 3px rgba(240, 160, 32, 0),
+      0 0 12px rgba(240, 160, 32, 0.8),
+      0 0 16px rgba(240, 160, 32, 0.6);
+  }
+}
+
+/* 离线 - 红色无炫光 */
+.status-offline {
+  background: #d03050;
+  box-shadow: 
+    0 0 0 0 rgba(208, 48, 80, 0.3),
+    0 0 4px rgba(208, 48, 80, 0.4);
 }
 </style>
