@@ -68,6 +68,23 @@ async function initDatabase() {
       )
     `)
 
+    // 文件引用表（转存功能）
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS file_references (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        original_file_id INT NOT NULL,
+        reference_name VARCHAR(255),
+        downloads INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (original_file_id) REFERENCES files(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_user_file (user_id, original_file_id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_original_file_id (original_file_id)
+      )
+    `)
+
     connection.release()
     console.log('✅ Database initialized successfully')
   } catch (error) {

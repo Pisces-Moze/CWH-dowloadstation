@@ -19,10 +19,18 @@
 - 支持限制下载次数
 - 一键复制分享链接
 
-### 4. 安全增强
+### 4. 转存功能（新！）
+- 将公共文件“转存”到私人空间
+- **不复制文件**，只创建引用，节约空间
+- 原文件被删除后，引用也会自动失效
+- 可以自定义引用名称
+- 引用的下载次数独立统计
+
+### 5. 安全增强
 - 私人文件绝对隔离，无法通过任何方式访问他人文件
 - 分享链接带有随机 32 位十六进制码
 - 过期和次数限制自动失效
+- 引用文件权限隔离，只有创建者可访问
 
 ## API 接口
 
@@ -95,6 +103,37 @@ DELETE /api/files/share/:shareCode
 Headers: Authorization: Bearer <token>
 ```
 
+### 转存公共文件到私人空间
+```
+POST /api/files/save-to-private/:fileId
+Headers: Authorization: Bearer <token>
+Body: {
+  "referenceName": "可选自定义名称"
+}
+
+Response: {
+  "success": true,
+  "message": "转存成功（不占用额外空间）"
+}
+```
+
+### 下载引用文件
+```
+GET /api/files/download-ref/:refId
+Headers: Authorization: Bearer <token>
+```
+
+### 删除引用
+```
+DELETE /api/files/reference/:refId
+Headers: Authorization: Bearer <token>
+
+Response: {
+  "success": true,
+  "message": "已从私人空间移除（原文件保留）"
+}
+```
+
 ## 数据库变更
 
 ### files 表新增字段
@@ -110,6 +149,15 @@ Headers: Authorization: Bearer <token>
 - `downloads` - 已下载次数
 - `max_downloads` - 最大下载次数（0=无限制）
 - `created_at` - 创建时间
+
+### 新增 file_references 表（转存功能）
+- `id` - 主键
+- `user_id` - 用户 ID
+- `original_file_id` - 原始文件 ID
+- `reference_name` - 自定义引用名称（可选）
+- `downloads` - 引用的下载次数
+- `created_at` - 创建时间
+- 约束：每个用户对同一文件只能转存一次
 
 ## 环境变量配置
 
@@ -141,6 +189,12 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    - JWT 令牌验证
    - 数据库级别的用户 ID 检查
    - 文件系统隔离
+
+4. **转存安全**
+   - 引用文件权限隔离，只有创建者可访问
+   - 原文件删除后，引用自动失效（CASCADE）
+   - 不会复制文件，节约存储空间
+   - 每个用户对同一文件只能转存一次
 
 ## 前端集成建议
 

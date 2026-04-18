@@ -95,36 +95,99 @@ router.get('/files', async (req, res, next) => {
   }
 })
 
-// 获取我的私人文件
+// 获取我的私人文件（包括引用）
 router.get('/private-files', authMiddleware, async (req, res, next) => {
   try {
-    const [files] = await db.query(`
+    // 获取真实私人文件
+    const [ownFiles] = await db.query(`
       SELECT 
         id,
         original_name as name,
         size,
         downloads,
-        created_at as uploadTime
+        created_at as uploadTime,
+        'own' as type
       FROM files
       WHERE user_id = ? AND is_private = TRUE
       ORDER BY created_at DESC
     `, [req.user.id])
 
+    // 获取引用文件
+    const [refFiles] = await db.query(`
+      SELECT 
+        fr.id,
+        COALESCE(fr.reference_name, f.original_name) as name,
+        f.size,
+        fr.downloads,
+        fr.created_at as uploadTime,
+        'reference' as type,
+        f.id as originalFileId
+      FROM file_references fr
+      JOIN files f ON fr.original_file_id = f.id
+      WHERE fr.user_id = ?
+      ORDER BY fr.created_at DESC
+    `, [req.user.id])
+
+    // 合并并按时间排序
+    const allFiles = [...ownFiles, ...refFiles].sort((a, b) => 
+      new Date(b.uploadTime) - new Date(a.uploadTime)
+    )
+
     const [stats] = await db.query(`
       SELECT 
-        COUNT(*) as totalFiles,
-        SUM(size) as totalSize
-      FROM files
-      WHERE user_id = ? AND is_private = TRUE
-    `, [req.user.id])
+        (SELECT COUNT(*) FROM files WHERE user_id = ? AND is_private = TRUE) +
+        (SELECT COUNT(*) FROM file_references WHERE user_id = ?) as totalFiles,
+        (SELECT COALESCE(SUM(size), 0) FROM files WHERE user_id = ? AND is_private = TRUE) as totalSize
+    `, [req.user.id, req.user.id, req.user.id])
 
     res.json({
       success: true,
-      files,
+      files: allFiles,
       stats: {
         totalFiles: stats[0].totalFiles || 0,
         totalSize: formatBytes(stats[0].totalSize || 0)
       }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 转存公共文件到私人空间（引用）
+router.post('/save-to-private/:fileId', authMiddleware, async (req, res, next) => {
+  try {
+    const { fileId } = req.params
+    const { referenceName } = req.body
+
+    // 检查文件是否存在且为公共文件
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ? AND is_private = FALSE',
+      [fileId]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在或不是公共文件', 404)
+    }
+
+    // 检查是否已经转存过
+    const [existing] = await db.query(
+      'SELECT * FROM file_references WHERE user_id = ? AND original_file_id = ?',
+      [req.user.id, fileId]
+    )
+
+    if (existing.length > 0) {
+      throw new AppError('已经转存过此文件', 400)
+    }
+
+    // 创建引用
+    await db.query(
+      'INSERT INTO file_references (user_id, original_file_id, reference_name) VALUES (?, ?, ?)',
+      [req.user.id, fileId, referenceName || null]
+    )
+
+    res.json({
+      success: true,
+      message: '转存成功（不占用额外空间）'
     })
   } catch (error) {
     next(error)
@@ -203,6 +266,55 @@ router.get('/download/:filename', optionalAuthMiddleware, async (req, res, next)
 
     // 解密并发送文件
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`)
+    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream')
+
+    const decryptStream = createDecryptStream(file.encryption_iv)
+    fs.createReadStream(filePath).pipe(decryptStream).pipe(res)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 下载引用文件
+router.get('/download-ref/:refId', authMiddleware, async (req, res, next) => {
+  try {
+    const { refId } = req.params
+
+    // 获取引用信息
+    const [refs] = await db.query(
+      'SELECT * FROM file_references WHERE id = ? AND user_id = ?',
+      [refId, req.user.id]
+    )
+
+    if (refs.length === 0) {
+      throw new AppError('引用不存在或无权限', 404)
+    }
+
+    const ref = refs[0]
+
+    // 获取原始文件
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ?',
+      [ref.original_file_id]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('原始文件已被删除', 404)
+    }
+
+    const file = files[0]
+    const filePath = path.join(process.env.UPLOAD_DIR || './uploads', file.filename)
+
+    if (!fs.existsSync(filePath)) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    // 增加引用的下载次数（不增加原文件的）
+    await db.query('UPDATE file_references SET downloads = downloads + 1 WHERE id = ?', [ref.id])
+
+    // 解密并发送文件
+    const displayName = ref.reference_name || file.original_name
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(displayName)}"`)
     res.setHeader('Content-Type', file.mime_type || 'application/octet-stream')
 
     const decryptStream = createDecryptStream(file.encryption_iv)
@@ -373,6 +485,28 @@ router.delete('/share/:shareCode', authMiddleware, async (req, res, next) => {
     await db.query('DELETE FROM share_links WHERE share_code = ?', [shareCode])
 
     res.json({ success: true, message: '分享链接已删除' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 删除引用文件
+router.delete('/reference/:refId', authMiddleware, async (req, res, next) => {
+  try {
+    const { refId } = req.params
+
+    const [refs] = await db.query(
+      'SELECT * FROM file_references WHERE id = ? AND user_id = ?',
+      [refId, req.user.id]
+    )
+
+    if (refs.length === 0) {
+      throw new AppError('引用不存在或无权限', 404)
+    }
+
+    await db.query('DELETE FROM file_references WHERE id = ?', [refId])
+
+    res.json({ success: true, message: '已从私人空间移除（原文件保留）' })
   } catch (error) {
     next(error)
   }
