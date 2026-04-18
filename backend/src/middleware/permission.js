@@ -35,13 +35,19 @@ export async function checkPermission(requiredPermission) {
 }
 
 // 检查是否为管理员
-export const requireAdmin = checkPermission('can_manage_users')
+export const requireAdmin = async (req, res, next) => {
+  return checkPermission('can_manage_users')(req, res, next)
+}
 
 // 检查是否可以查看统计
-export const requireViewStats = checkPermission('can_view_stats')
+export const requireViewStats = async (req, res, next) => {
+  return checkPermission('can_view_stats')(req, res, next)
+}
 
 // 检查是否可以删除公共文件
-export const requireDeletePublicFiles = checkPermission('can_delete_public_files')
+export const requireDeletePublicFiles = async (req, res, next) => {
+  return checkPermission('can_delete_public_files')(req, res, next)
+}
 
 // 检查存储空间配额
 export async function checkStorageQuota(req, res, next) {
