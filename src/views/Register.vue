@@ -29,6 +29,28 @@
           </n-input>
         </n-form-item>
 
+        <n-form-item path="code" label="验证码">
+          <n-input-group>
+            <n-input
+              v-model:value="formData.code"
+              placeholder="请输入邮箱验证码"
+              maxlength="6"
+              style="flex: 1"
+            >
+              <template #prefix>
+                <n-icon><ShieldCheckmarkOutline /></n-icon>
+              </template>
+            </n-input>
+            <n-button
+              :disabled="countdown > 0 || !formData.email"
+              :loading="sendingCode"
+              @click="handleSendCode"
+            >
+              {{ countdown > 0 ? `${countdown}s` : '发送验证码' }}
+            </n-button>
+          </n-input-group>
+        </n-form-item>
+
         <n-form-item path="password" label="密码">
           <n-input
             v-model:value="formData.password"
@@ -82,9 +104,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCard, NForm, NFormItem, NInput, NButton, NSpace, NIcon, useMessage } from 'naive-ui'
-import { PersonOutline, MailOutline, LockClosedOutline } from '@vicons/ionicons5'
+import { NCard, NForm, NFormItem, NInput, NInputGroup, NButton, NSpace, NIcon, useMessage } from 'naive-ui'
+import { PersonOutline, MailOutline, LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
+import api from '../api/request'
 
 const router = useRouter()
 const message = useMessage()
@@ -92,10 +115,13 @@ const userStore = useUserStore()
 
 const formRef = ref(null)
 const loading = ref(false)
+const sendingCode = ref(false)
+const countdown = ref(0)
 
 const formData = ref({
   username: '',
   email: '',
+  code: '',
   password: '',
   confirmPassword: ''
 })
@@ -108,6 +134,10 @@ const rules = {
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
+  ],
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码为 6 位数字', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -125,6 +155,39 @@ const rules = {
   ]
 }
 
+async function handleSendCode() {
+  // 验证邮箱
+  if (!formData.value.email) {
+    message.error('请先输入邮箱')
+    return
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.value.email)) {
+    message.error('请输入有效的邮箱地址')
+    return
+  }
+
+  sendingCode.value = true
+  try {
+    await api.post('/auth/send-code', { email: formData.value.email })
+    message.success('验证码已发送到您的邮箱')
+    
+    // 开始倒计时
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (error) {
+    message.error(error.response?.data?.message || '验证码发送失败')
+  } finally {
+    sendingCode.value = false
+  }
+}
+
 async function handleRegister() {
   try {
     await formRef.value?.validate()
@@ -133,7 +196,8 @@ async function handleRegister() {
     const result = await userStore.register(
       formData.value.username,
       formData.value.email,
-      formData.value.password
+      formData.value.password,
+      formData.value.code
     )
     
     if (result.success) {

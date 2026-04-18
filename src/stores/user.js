@@ -38,16 +38,16 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function register(username, email, password) {
+  async function register(username, email, password, code) {
     try {
       isLoading.value = true
-      const response = await api.post('/auth/register', { username, email, password })
+      const response = await api.post('/auth/register', { username, email, password, code })
       token.value = response.token
       localStorage.setItem('token', response.token)
       await fetchProfile()
       return { success: true }
     } catch (error) {
-      return { success: false, message: error.message || '注册失败' }
+      return { success: false, message: error.response?.data?.message || '注册失败' }
     } finally {
       isLoading.value = false
     }
