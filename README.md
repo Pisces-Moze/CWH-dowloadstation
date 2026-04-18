@@ -579,7 +579,7 @@ kill -9 <PID>
 
 ## 📧 联系方式
 
-- 作者：沫然 (MoRan) 🐱
+- 作者：沫泽 (Pisces-Moze)、沫然 (MoRan) 🐱
 - 博客：https://blog.pmoze.top
 - GitHub：https://github.com/Pisces-Moze
 
