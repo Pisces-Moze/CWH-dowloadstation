@@ -13,9 +13,13 @@
 - 下载时自动解密，对用户透明
 
 ### 3. 分享功能
-- 公共文件支持生成分享链接
+- 公共和私人文件都支持生成分享链接
 - 支持设置分享密码
-- 支持设置过期时间
+- 灵活的过期时间选项：
+  - 一个月
+  - 一年
+  - 永久有效
+  - 自定义到期时间
 - 支持限制下载次数
 - 一键复制分享链接
 
@@ -73,15 +77,26 @@ POST /api/files/share/:fileId
 Headers: Authorization: Bearer <token>
 Body: {
   "password": "可选密码",
-  "expiresIn": 24, // 小时数，可选
+  "expireType": "1month" | "1year" | "permanent" | "custom",
+  "expiresAt": "2026-05-18T12:00:00.000Z", // expireType=custom 时必填
   "maxDownloads": 10 // 最大下载次数，可选
 }
+
+过期类型说明：
+- "1month": 一个月后过期
+- "1year": 一年后过期
+- "permanent": 永久有效
+- "custom": 自定义过期时间（需要提供 expiresAt）
+
+兼容旧版本：
+- "expiresIn": 24 // 小时数，仍然支持
 
 Response: {
   "success": true,
   "shareUrl": "https://xxx/api/files/s/abc123...",
   "shareCode": "abc123...",
-  "expiresAt": "2026-04-19T12:00:00.000Z"
+  "expiresAt": "2026-04-19T12:00:00.000Z",
+  "expireType": "1month"
 }
 ```
 

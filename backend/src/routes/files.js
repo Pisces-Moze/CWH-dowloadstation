@@ -386,7 +386,7 @@ router.get('/file-info/:fileId', optionalAuthMiddleware, async (req, res, next) 
 router.post('/share/:fileId', authMiddleware, async (req, res, next) => {
   try {
     const { fileId } = req.params
-    const { password, expiresIn, maxDownloads } = req.body
+    const { password, expiresIn, expiresAt: customExpiresAt, expireType, maxDownloads } = req.body
 
     const [files] = await db.query(
       'SELECT * FROM files WHERE id = ? AND user_id = ?',
@@ -399,16 +399,40 @@ router.post('/share/:fileId', authMiddleware, async (req, res, next) => {
 
     const file = files[0]
 
-    // 私人文件不能分享
-    if (file.is_private) {
-      throw new AppError('私人文件不支持分享', 400)
-    }
+    // 私人文件也可以分享了！
+    // if (file.is_private) {
+    //   throw new AppError('私人文件不支持分享', 400)
+    // }
 
     const shareCode = generateShareCode()
     let expiresAt = null
 
-    if (expiresIn) {
+    // 支持多种过期时间设置方式
+    if (expireType) {
+      const now = Date.now()
+      switch (expireType) {
+        case '1month':
+          expiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000)
+          break
+        case '1year':
+          expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000)
+          break
+        case 'permanent':
+          expiresAt = null
+          break
+        case 'custom':
+          if (customExpiresAt) {
+            expiresAt = new Date(customExpiresAt)
+          }
+          break
+        default:
+          throw new AppError('无效的过期类型', 400)
+      }
+    } else if (expiresIn) {
+      // 兼容旧的 expiresIn 参数（小时数）
       expiresAt = new Date(Date.now() + expiresIn * 60 * 60 * 1000)
+    } else if (customExpiresAt) {
+      expiresAt = new Date(customExpiresAt)
     }
 
     await db.query(
@@ -422,7 +446,8 @@ router.post('/share/:fileId', authMiddleware, async (req, res, next) => {
       success: true,
       shareUrl,
       shareCode,
-      expiresAt
+      expiresAt,
+      expireType: expireType || 'custom'
     })
   } catch (error) {
     next(error)
