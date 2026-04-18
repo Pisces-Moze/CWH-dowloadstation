@@ -7,14 +7,14 @@
         :rules="rules"
         size="large"
       >
-        <n-form-item path="email" label="邮箱">
+        <n-form-item path="email" label="邮箱/用户名">
           <n-input
             v-model:value="formData.email"
-            placeholder="请输入邮箱"
+            placeholder="请输入邮箱或用户名"
             @keyup.enter="handleLogin"
           >
             <template #prefix>
-              <n-icon><MailOutline /></n-icon>
+              <n-icon><PersonOutline /></n-icon>
             </template>
           </n-input>
         </n-form-item>
@@ -60,7 +60,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCard, NForm, NFormItem, NInput, NButton, NSpace, NIcon, useMessage } from 'naive-ui'
-import { MailOutline, LockClosedOutline } from '@vicons/ionicons5'
+import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
@@ -77,8 +77,7 @@ const formData = ref({
 
 const rules = {
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
+    { required: true, message: '请输入邮箱或用户名', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },

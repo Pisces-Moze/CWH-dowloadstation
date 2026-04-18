@@ -129,9 +129,10 @@ router.get('/files', async (req, res, next) => {
         f.created_at as uploadTime,
         f.user_id as userId,
         u.username as uploader,
-        u.avatar_file_id as uploaderAvatarFileId
+        avatar.filename as uploaderAvatarFilename
       FROM files f
       JOIN users u ON f.user_id = u.id
+      LEFT JOIN files avatar ON u.avatar_file_id = avatar.id
       WHERE f.is_private = FALSE ${searchCondition}
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
@@ -151,8 +152,8 @@ router.get('/files', async (req, res, next) => {
     const filesWithRank = files.map(file => ({
       ...file,
       downloadRank: rankMap.get(file.id) || null,
-      uploaderAvatar: file.uploaderAvatarFileId 
-        ? `/api/files/download/${file.uploaderAvatarFileId}` 
+      uploaderAvatar: file.uploaderAvatarFilename 
+        ? `/api/files/download/${file.uploaderAvatarFilename}` 
         : null
     }))
 

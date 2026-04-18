@@ -67,7 +67,7 @@
               <n-thing :title="file.name">
                 <template #description>
                   <n-space>
-                    <n-tag size="small" type="info">{{ file.size }}</n-tag>
+                    <n-tag size="small" type="info">{{ formatBytes(file.size) }}</n-tag>
                     <n-tag size="small" type="success">
                       <template #icon>
                         <n-icon><DownloadOutline /></n-icon>
@@ -192,6 +192,14 @@ function getFileIconColor(mimeType) {
   if (mimeType.startsWith('audio/')) return '#722ed1'
   if (mimeType.includes('zip') || mimeType.includes('rar')) return '#fa8c16'
   return '#666'
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
 async function loadFiles() {
