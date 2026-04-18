@@ -5,6 +5,7 @@ import fs from 'fs'
 import { fileURLToPath } from 'url'
 import db from '../config/database.js'
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js'
+import { checkStorageQuota } from '../middleware/permission.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { encryptFile, createDecryptStream, generateShareCode, isValidShareCode, calculateFileMD5 } from '../utils/encryption.js'
 
@@ -33,7 +34,7 @@ const upload = multer({
 })
 
 // 上传文件（支持公共/私人空间）
-router.post('/upload', authMiddleware, upload.single('file'), async (req, res, next) => {
+router.post('/upload', authMiddleware, upload.single('file'), checkStorageQuota, async (req, res, next) => {
   try {
     if (!req.file) {
       throw new AppError('请选择文件', 400)
@@ -56,6 +57,11 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res, n
       'INSERT INTO files (user_id, filename, original_name, size, mime_type, is_private, encryption_iv, md5) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [req.user.id, filename, originalname, size, mimetype, isPrivate, iv, md5]
     )
+
+    // 更新用户存储使用量（只统计私人文件）
+    if (isPrivate) {
+      await db.query('UPDATE users SET storage_used = storage_used + ? WHERE id = ?', [size, req.user.id])
+    }
 
     res.json({
       success: true,
@@ -269,6 +275,14 @@ router.get('/download/:filename', optionalAuthMiddleware, async (req, res, next)
     // 增加下载次数
     await db.query('UPDATE files SET downloads = downloads + 1 WHERE id = ?', [file.id])
 
+    // 记录下载日志
+    const userId = req.user ? req.user.id : null
+    const ipAddress = req.ip || req.connection.remoteAddress
+    await db.query(
+      'INSERT INTO download_logs (file_id, user_id, ip_address) VALUES (?, ?, ?)',
+      [file.id, userId, ipAddress]
+    )
+
     // 解密并发送文件
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`)
     res.setHeader('Content-Type', file.mime_type || 'application/octet-stream')
@@ -364,6 +378,17 @@ router.get('/file-info/:fileId', optionalAuthMiddleware, async (req, res, next) 
       }
     }
 
+    // 获取下载排名（仅公共文件）
+    let downloadRank = null
+    if (!file.isPrivate) {
+      const [rankResult] = await db.query(`
+        SELECT COUNT(*) + 1 as rank
+        FROM files
+        WHERE is_private = FALSE AND downloads > ?
+      `, [file.downloads])
+      downloadRank = rankResult[0].rank
+    }
+
     res.json({
       success: true,
       file: {
@@ -372,9 +397,11 @@ router.get('/file-info/:fileId', optionalAuthMiddleware, async (req, res, next) 
         sizeBytes: file.size,
         mimeType: file.mimeType,
         downloads: file.downloads,
+        downloadRank: downloadRank,
         md5: file.md5,
         uploadTime: file.uploadTime,
         uploader: file.uploader,
+        uploaderUserId: file.user_id,
         isPrivate: file.isPrivate
       }
     })

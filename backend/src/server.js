@@ -11,9 +11,12 @@ import fs from 'fs'
 // 路由
 import authRoutes from './routes/auth.js'
 import fileRoutes from './routes/files.js'
+import adminRoutes from './routes/admin.js'
+import profileRoutes from './routes/profile.js'
 
 // 中间件
 import { errorHandler } from './middleware/errorHandler.js'
+import db from './config/database.js'
 
 dotenv.config()
 
@@ -42,9 +45,40 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true })
 }
 
+// 访客追踪中间件
+app.use(async (req, res, next) => {
+  try {
+    const sessionId = req.cookies.session_id || require('crypto').randomBytes(32).toString('hex')
+    const userId = req.user ? req.user.id : null
+    const ipAddress = req.ip || req.connection.remoteAddress
+    const userAgent = req.get('user-agent')
+
+    // 设置 session cookie
+    if (!req.cookies.session_id) {
+      res.cookie('session_id', sessionId, { maxAge: 24 * 60 * 60 * 1000, httpOnly: true })
+    }
+
+    // 更新或创建访客会话
+    await db.query(`
+      INSERT INTO visitor_sessions (session_id, user_id, ip_address, user_agent)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        user_id = VALUES(user_id),
+        last_activity = CURRENT_TIMESTAMP
+    `, [sessionId, userId, ipAddress, userAgent])
+
+    next()
+  } catch (error) {
+    // 访客追踪失败不影响主流程
+    next()
+  }
+})
+
 // 路由
 app.use('/api/auth', authRoutes)
-app.use('/api', fileRoutes)
+app.use('/api/files', fileRoutes)
+app.use('/api/admin', adminRoutes)
+app.use('/api/profile', profileRoutes)
 
 // 健康检查
 app.get('/api/health', (req, res) => {

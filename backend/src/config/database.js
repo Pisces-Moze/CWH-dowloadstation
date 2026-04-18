@@ -18,18 +18,69 @@ async function initDatabase() {
   try {
     const connection = await pool.getConnection()
     
-    // 用户表
+    // 角色表
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(50) NOT NULL UNIQUE,
+        display_name VARCHAR(100) NOT NULL,
+        storage_quota BIGINT DEFAULT 3221225472,
+        can_delete_public_files BOOLEAN DEFAULT FALSE,
+        can_manage_users BOOLEAN DEFAULT FALSE,
+        can_view_stats BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // 插入默认角色
+    await connection.query(`
+      INSERT IGNORE INTO roles (name, display_name, storage_quota, can_delete_public_files, can_manage_users, can_view_stats)
+      VALUES 
+        ('admin', '管理员', 3221225472, TRUE, TRUE, TRUE),
+        ('user', '普通用户', 3221225472, FALSE, FALSE, FALSE)
+    `)
+
+    // 用户表（扩展）
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL UNIQUE,
+        role_id INT DEFAULT 2,
+        avatar_file_id INT NULL,
+        bio TEXT,
+        storage_used BIGINT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (role_id) REFERENCES roles(id),
         INDEX idx_username (username),
-        INDEX idx_email (email)
+        INDEX idx_email (email),
+        INDEX idx_role_id (role_id)
       )
     `)
+
+    // 检查是否存在管理员账户
+    const [admins] = await connection.query(`
+      SELECT COUNT(*) as count FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE r.name = 'admin'
+    `)
+
+    // 如果没有管理员，创建默认管理员
+    if (admins[0].count === 0) {
+      const crypto = await import('crypto')
+      const defaultPassword = crypto.randomBytes(8).toString('hex')
+      
+      await connection.query(`
+        INSERT INTO users (username, password, email, role_id)
+        VALUES ('admin', ?, 'admin@localhost', 1)
+      `, [defaultPassword])
+      
+      console.log('\n🔐 默认管理员账户已创建：')
+      console.log('   用户名: admin')
+      console.log('   密码:', defaultPassword)
+      console.log('   ⚠️  请立即登录并修改密码！\n')
+    }
 
     // 文件表
     await connection.query(`
@@ -83,6 +134,37 @@ async function initDatabase() {
         UNIQUE KEY unique_user_file (user_id, original_file_id),
         INDEX idx_user_id (user_id),
         INDEX idx_original_file_id (original_file_id)
+      )
+    `)
+
+    // 访客统计表
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS visitor_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        session_id VARCHAR(64) NOT NULL UNIQUE,
+        user_id INT NULL,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+        INDEX idx_session_id (session_id),
+        INDEX idx_last_activity (last_activity)
+      )
+    `)
+
+    // 文件下载日志表
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS download_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        file_id INT NOT NULL,
+        user_id INT NULL,
+        ip_address VARCHAR(45),
+        downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+        INDEX idx_file_id (file_id),
+        INDEX idx_downloaded_at (downloaded_at)
       )
     `)
 
