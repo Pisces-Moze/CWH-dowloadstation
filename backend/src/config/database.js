@@ -41,10 +41,30 @@ async function initDatabase() {
         size BIGINT NOT NULL,
         mime_type VARCHAR(100),
         downloads INT DEFAULT 0,
+        is_private BOOLEAN DEFAULT FALSE,
+        encryption_iv VARCHAR(32),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         INDEX idx_user_id (user_id),
-        INDEX idx_created_at (created_at)
+        INDEX idx_created_at (created_at),
+        INDEX idx_is_private (is_private)
+      )
+    `)
+
+    // 分享链接表
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS share_links (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        file_id INT NOT NULL,
+        share_code VARCHAR(32) NOT NULL UNIQUE,
+        password VARCHAR(255),
+        expires_at TIMESTAMP NULL,
+        downloads INT DEFAULT 0,
+        max_downloads INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+        INDEX idx_share_code (share_code),
+        INDEX idx_file_id (file_id)
       )
     `)
 

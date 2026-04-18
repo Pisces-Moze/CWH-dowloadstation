@@ -15,3 +15,19 @@ export function authMiddleware(req, res, next) {
     return res.status(401).json({ message: '无效的令牌' })
   }
 }
+
+// 可选认证中间件（用于下载等场景）
+export function optionalAuthMiddleware(req, res, next) {
+  try {
+    const token = req.headers.authorization?.split(' ')[1] || req.cookies.token
+    
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET)
+      req.user = decoded
+    }
+    
+    next()
+  } catch (error) {
+    next()
+  }
+}
