@@ -8,7 +8,7 @@ import { AppError } from '../middleware/errorHandler.js'
 const router = express.Router()
 
 // 注册
-router.post('/signup',
+router.post('/register',
   body('username').trim().isLength({ min: 3, max: 50 }).withMessage('用户名长度3-50字符'),
   body('email').isEmail().withMessage('请输入有效的邮箱'),
   body('password').isLength({ min: 6 }).withMessage('密码至少6位'),
@@ -35,12 +35,26 @@ router.post('/signup',
       const hashedPassword = await bcrypt.hash(password, 10)
 
       // 插入用户
-      await db.query(
+      const [result] = await db.query(
         'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
         [username, email, hashedPassword]
       )
 
-      res.status(201).json({ success: true, message: '注册成功' })
+      const userId = result.insertId
+
+      // 生成 JWT
+      const token = jwt.sign(
+        { id: userId, username },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+
+      res.status(201).json({ 
+        success: true, 
+        message: '注册成功',
+        token,
+        username
+      })
     } catch (error) {
       next(error)
     }

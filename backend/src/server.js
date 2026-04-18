@@ -27,11 +27,21 @@ const app = express()
 const PORT = process.env.PORT || 1145
 
 // 中间件
-app.use(helmet())
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+    },
+  },
+}))
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? 'https://yourdomain.com' 
-    : 'http://localhost:3000',
+    : ['http://localhost:3000', 'http://localhost:5173'],
   credentials: true
 }))
 app.use(morgan('dev'))
