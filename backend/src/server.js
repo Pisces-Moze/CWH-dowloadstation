@@ -1,0 +1,142 @@
+import express from 'express'
+import cors from 'cors'
+import helmet from 'helmet'
+import morgan from 'morgan'
+import cookieParser from 'cookie-parser'
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import fs from 'fs'
+import http from 'http'
+
+// 路由
+import authRoutes from './routes/auth.js'
+import fileRoutes from './routes/files.js'
+import adminRoutes from './routes/admin.js'
+import profileRoutes from './routes/profile.js'
+
+// 中间件
+import { errorHandler } from './middleware/errorHandler.js'
+import db from './config/database.js'
+import { initializeSocket, getOnlineUsers, getUserStatus } from './utils/socket.js'
+
+dotenv.config()
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const app = express()
+const PORT = process.env.PORT || 1145
+
+// 中间件
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://localhost:5173", "ws://localhost:3000", "ws://localhost:5173"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+    },
+  },
+}))
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://yourdomain.com' 
+    : ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true
+}))
+app.use(morgan('dev'))
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(cookieParser())
+
+// 创建必要的目录
+const uploadDir = process.env.UPLOAD_DIR || './uploads'
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
+
+// 访客追踪中间件
+app.use(async (req, res, next) => {
+  try {
+    const sessionId = req.cookies.session_id || require('crypto').randomBytes(32).toString('hex')
+    const userId = req.user ? req.user.id : null
+    const ipAddress = req.ip || req.connection.remoteAddress
+    const userAgent = req.get('user-agent')
+
+    // 设置 session cookie
+    if (!req.cookies.session_id) {
+      res.cookie('session_id', sessionId, { maxAge: 24 * 60 * 60 * 1000, httpOnly: true })
+    }
+
+    // 更新或创建访客会话
+    await db.query(`
+      INSERT INTO visitor_sessions (session_id, user_id, ip_address, user_agent)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        user_id = VALUES(user_id),
+        last_activity = CURRENT_TIMESTAMP
+    `, [sessionId, userId, ipAddress, userAgent])
+
+    next()
+  } catch (error) {
+    // 访客追踪失败不影响主流程
+    next()
+  }
+})
+
+// API 路由
+app.use('/api/auth', authRoutes)
+app.use('/api/files', fileRoutes)
+app.use('/api/admin', adminRoutes)
+app.use('/api/profile', profileRoutes)
+
+// 在线状态 API
+app.get('/api/users/online', (req, res) => {
+  res.json({ users: getOnlineUsers() })
+})
+
+app.get('/api/users/:userId/status', (req, res) => {
+  const status = getUserStatus(parseInt(req.params.userId))
+  res.json({ userId: req.params.userId, status })
+})
+
+// 健康检查
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// 静态文件服务（前端）
+const frontendDistPath = path.join(__dirname, '../../dist')
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath))
+  
+  // SPA 路由支持 - 所有非 API 请求返回 index.html
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(frontendDistPath, 'index.html'))
+    }
+  })
+  console.log('✅ 前端静态文件已加载')
+} else {
+  console.log('⚠️  前端未构建，请运行: npm run build:frontend')
+}
+
+// 错误处理
+app.use(errorHandler)
+
+// 创建 HTTP 服务器
+const server = http.createServer(app)
+
+// 初始化 WebSocket
+initializeSocket(server)
+
+// 启动服务器
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🔌 WebSocket enabled`)
+})
+
+export default app

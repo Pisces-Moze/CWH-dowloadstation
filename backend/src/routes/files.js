@@ -1,0 +1,730 @@
+import express from 'express'
+import multer from 'multer'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+import db from '../config/database.js'
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js'
+import { checkStorageQuota } from '../middleware/permission.js'
+import { AppError } from '../middleware/errorHandler.js'
+import { encryptFile, createDecryptStream, generateShareCode, isValidShareCode, calculateFileMD5 } from '../utils/encryption.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const router = express.Router()
+
+// 配置文件上传
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = process.env.UPLOAD_DIR || './uploads'
+    cb(null, uploadDir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, uniqueSuffix + '-' + Buffer.from(file.originalname, 'latin1').toString('utf8'))
+  }
+})
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 1024 * 1024 * 1024
+  }
+})
+
+// 上传文件（支持公共/私人空间）
+router.post('/upload', authMiddleware, upload.single('file'), checkStorageQuota, async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw new AppError('请选择文件', 400)
+    }
+
+    const { filename, originalname, size, mimetype, path: filePath } = req.file
+    const isPrivate = req.body.isPrivate === 'true'
+
+    // 加密文件
+    const encryptedPath = filePath + '.enc'
+    const iv = await encryptFile(filePath, encryptedPath)
+
+    // 重命名加密文件
+    fs.renameSync(encryptedPath, filePath)
+
+    // 计算 MD5
+    const md5 = await calculateFileMD5(filePath, iv)
+
+    await db.query(
+      'INSERT INTO files (user_id, filename, original_name, size, mime_type, is_private, encryption_iv, md5) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.user.id, filename, originalname, size, mimetype, isPrivate, iv, md5]
+    )
+
+    // 更新用户存储使用量（只统计私人文件）
+    if (isPrivate) {
+      await db.query('UPDATE users SET storage_used = storage_used + ? WHERE id = ?', [size, req.user.id])
+    }
+
+    res.json({
+      success: true,
+      message: `上传成功（${isPrivate ? '私人空间' : '公共空间'}）`,
+      file: {
+        name: originalname,
+        size,
+        isPrivate,
+        md5
+      }
+    })
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path)
+    }
+    next(error)
+  }
+})
+
+// 获取公共文件列表
+router.get('/files', async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const pageSize = parseInt(req.query.pageSize) || 20
+    const sortBy = req.query.sortBy || 'newest'
+    const search = req.query.search || ''
+    const offset = (page - 1) * pageSize
+
+    // 构建排序条件
+    let orderBy = 'f.created_at DESC'
+    if (sortBy === 'downloads') {
+      orderBy = 'f.downloads DESC, f.created_at DESC'
+    } else if (sortBy === 'size') {
+      orderBy = 'f.size DESC, f.created_at DESC'
+    }
+
+    // 构建搜索条件
+    let searchCondition = ''
+    let searchParams = []
+    if (search) {
+      searchCondition = 'AND (f.original_name LIKE ? OR u.username LIKE ?)'
+      searchParams = [`%${search}%`, `%${search}%`]
+    }
+
+    // 获取总数
+    const [countResult] = await db.query(`
+      SELECT COUNT(*) as total
+      FROM files f
+      JOIN users u ON f.user_id = u.id
+      WHERE f.is_private = FALSE ${searchCondition}
+    `, searchParams)
+
+    const total = countResult[0].total
+    const totalPages = Math.ceil(total / pageSize)
+
+    // 获取文件列表
+    const [files] = await db.query(`
+      SELECT 
+        f.id,
+        f.filename,
+        f.original_name as name,
+        f.size,
+        f.mime_type as mimeType,
+        f.downloads,
+        f.created_at as uploadTime,
+        f.user_id as userId,
+        u.username as uploader,
+        avatar.filename as uploaderAvatarFilename
+      FROM files f
+      JOIN users u ON f.user_id = u.id
+      LEFT JOIN files avatar ON u.avatar_file_id = avatar.id
+      WHERE f.is_private = FALSE ${searchCondition}
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `, [...searchParams, pageSize, offset])
+
+    // 获取下载排名
+    const [rankings] = await db.query(`
+      SELECT id, 
+        RANK() OVER (ORDER BY downloads DESC) as downloadRank
+      FROM files
+      WHERE is_private = FALSE AND downloads > 0
+    `)
+
+    const rankMap = new Map(rankings.map(r => [r.id, r.downloadRank]))
+
+    // 添加排名和头像URL
+    const filesWithRank = files.map(file => ({
+      ...file,
+      downloadRank: rankMap.get(file.id) || null,
+      uploaderAvatar: file.uploaderAvatarFilename 
+        ? `/api/files/download/${file.uploaderAvatarFilename}` 
+        : null
+    }))
+
+    res.json({ 
+      success: true, 
+      files: filesWithRank,
+      total,
+      totalPages,
+      currentPage: page
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 获取我的私人文件（包括引用）
+router.get('/private-files', authMiddleware, async (req, res, next) => {
+  try {
+    // 获取真实私人文件
+    const [ownFiles] = await db.query(`
+      SELECT 
+        id,
+        original_name as name,
+        size,
+        downloads,
+        created_at as uploadTime,
+        'own' as type
+      FROM files
+      WHERE user_id = ? AND is_private = TRUE
+      ORDER BY created_at DESC
+    `, [req.user.id])
+
+    // 获取引用文件（包括失效的）
+    const [refFiles] = await db.query(`
+      SELECT 
+        fr.id,
+        COALESCE(fr.reference_name, f.original_name, '（已失效）') as name,
+        COALESCE(f.size, 0) as size,
+        fr.downloads,
+        fr.created_at as uploadTime,
+        'reference' as type,
+        f.id as originalFileId,
+        CASE WHEN f.id IS NULL THEN TRUE ELSE FALSE END as isInvalid
+      FROM file_references fr
+      LEFT JOIN files f ON fr.original_file_id = f.id
+      WHERE fr.user_id = ?
+      ORDER BY fr.created_at DESC
+    `, [req.user.id])
+
+    // 合并并按时间排序
+    const allFiles = [...ownFiles, ...refFiles].sort((a, b) => 
+      new Date(b.uploadTime) - new Date(a.uploadTime)
+    )
+
+    const [stats] = await db.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM files WHERE user_id = ? AND is_private = TRUE) +
+        (SELECT COUNT(*) FROM file_references WHERE user_id = ?) as totalFiles,
+        (SELECT COALESCE(SUM(size), 0) FROM files WHERE user_id = ? AND is_private = TRUE) as totalSize
+    `, [req.user.id, req.user.id, req.user.id])
+
+    res.json({
+      success: true,
+      files: allFiles,
+      stats: {
+        totalFiles: stats[0].totalFiles || 0,
+        totalSize: stats[0].totalSize || 0
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 转存公共文件到私人空间（引用）
+router.post('/save-to-private/:fileId', authMiddleware, async (req, res, next) => {
+  try {
+    const { fileId } = req.params
+    const { referenceName } = req.body
+
+    // 检查文件是否存在且为公共文件
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ? AND is_private = FALSE',
+      [fileId]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在或不是公共文件', 404)
+    }
+
+    // 检查是否已经转存过
+    const [existing] = await db.query(
+      'SELECT * FROM file_references WHERE user_id = ? AND original_file_id = ?',
+      [req.user.id, fileId]
+    )
+
+    if (existing.length > 0) {
+      throw new AppError('已经转存过此文件', 400)
+    }
+
+    // 创建引用
+    await db.query(
+      'INSERT INTO file_references (user_id, original_file_id, reference_name) VALUES (?, ?, ?)',
+      [req.user.id, fileId, referenceName || null]
+    )
+
+    res.json({
+      success: true,
+      message: '转存成功（不占用额外空间）'
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 获取我的公共文件
+router.get('/my-files', authMiddleware, async (req, res, next) => {
+  try {
+    const [files] = await db.query(`
+      SELECT 
+        id,
+        original_name as name,
+        size,
+        downloads,
+        created_at as uploadTime
+      FROM files
+      WHERE user_id = ? AND is_private = FALSE
+      ORDER BY created_at DESC
+    `, [req.user.id])
+
+    const [stats] = await db.query(`
+      SELECT 
+        COUNT(*) as totalFiles,
+        SUM(size) as totalSize,
+        SUM(downloads) as downloads
+      FROM files
+      WHERE user_id = ? AND is_private = FALSE
+    `, [req.user.id])
+
+    res.json({
+      success: true,
+      files,
+      stats: {
+        totalFiles: stats[0].totalFiles || 0,
+        totalSize: formatBytes(stats[0].totalSize || 0),
+        downloads: stats[0].downloads || 0
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 下载文件（带权限验证）
+router.get('/download/:filename', optionalAuthMiddleware, async (req, res, next) => {
+  try {
+    const { filename } = req.params
+
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE filename = ?',
+      [filename]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    const file = files[0]
+
+    // 私人文件权限检查
+    if (file.is_private) {
+      if (!req.user || req.user.id !== file.user_id) {
+        throw new AppError('无权访问此文件', 403)
+      }
+    }
+
+    const filePath = path.join(process.env.UPLOAD_DIR || './uploads', file.filename)
+
+    if (!fs.existsSync(filePath)) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    // 增加下载次数
+    await db.query('UPDATE files SET downloads = downloads + 1 WHERE id = ?', [file.id])
+
+    // 记录下载日志
+    const userId = req.user ? req.user.id : null
+    const ipAddress = req.ip || req.connection.remoteAddress
+    await db.query(
+      'INSERT INTO download_logs (file_id, user_id, ip_address) VALUES (?, ?, ?)',
+      [file.id, userId, ipAddress]
+    )
+
+    // 解密并发送文件
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`)
+    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream')
+
+    const decryptStream = createDecryptStream(file.encryption_iv)
+    fs.createReadStream(filePath).pipe(decryptStream).pipe(res)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 下载引用文件
+router.get('/download-ref/:refId', authMiddleware, async (req, res, next) => {
+  try {
+    const { refId } = req.params
+
+    // 获取引用信息
+    const [refs] = await db.query(
+      'SELECT * FROM file_references WHERE id = ? AND user_id = ?',
+      [refId, req.user.id]
+    )
+
+    if (refs.length === 0) {
+      throw new AppError('引用不存在或无权限', 404)
+    }
+
+    const ref = refs[0]
+
+    // 获取原始文件
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ?',
+      [ref.original_file_id]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('原始文件已被删除', 404)
+    }
+
+    const file = files[0]
+    const filePath = path.join(process.env.UPLOAD_DIR || './uploads', file.filename)
+
+    if (!fs.existsSync(filePath)) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    // 增加引用的下载次数（不增加原文件的）
+    await db.query('UPDATE file_references SET downloads = downloads + 1 WHERE id = ?', [ref.id])
+
+    // 解密并发送文件
+    const displayName = ref.reference_name || file.original_name
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(displayName)}"`)
+    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream')
+
+    const decryptStream = createDecryptStream(file.encryption_iv)
+    fs.createReadStream(filePath).pipe(decryptStream).pipe(res)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 获取文件详细信息
+router.get('/file-info/:fileId', optionalAuthMiddleware, async (req, res, next) => {
+  try {
+    const { fileId } = req.params
+
+    const [files] = await db.query(`
+      SELECT 
+        f.id,
+        f.user_id,
+        f.original_name as name,
+        f.size,
+        f.mime_type as mimeType,
+        f.downloads,
+        f.md5,
+        f.created_at as uploadTime,
+        f.is_private as isPrivate,
+        u.username as uploader
+      FROM files f
+      JOIN users u ON f.user_id = u.id
+      WHERE f.id = ?
+    `, [fileId])
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    const file = files[0]
+
+    // 私人文件需要权限验证
+    if (file.isPrivate) {
+      if (!req.user || req.user.id !== file.user_id) {
+        throw new AppError('无权查看此文件', 403)
+      }
+    }
+
+    // 获取下载排名（仅公共文件）
+    let downloadRank = null
+    if (!file.isPrivate) {
+      const [rankResult] = await db.query(`
+        SELECT COUNT(*) + 1 as rank
+        FROM files
+        WHERE is_private = FALSE AND downloads > ?
+      `, [file.downloads])
+      downloadRank = rankResult[0].rank
+    }
+
+    res.json({
+      success: true,
+      file: {
+        name: file.name,
+        size: formatBytes(file.size),
+        sizeBytes: file.size,
+        mimeType: file.mimeType,
+        downloads: file.downloads,
+        downloadRank: downloadRank,
+        md5: file.md5,
+        uploadTime: file.uploadTime,
+        uploader: file.uploader,
+        uploaderUserId: file.user_id,
+        isPrivate: file.isPrivate
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 创建分享链接
+router.post('/share/:fileId', authMiddleware, async (req, res, next) => {
+  try {
+    const { fileId } = req.params
+    const { password, expiresIn, expiresAt: customExpiresAt, expireType, maxDownloads } = req.body
+
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ? AND user_id = ?',
+      [fileId, req.user.id]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在或无权限', 404)
+    }
+
+    const file = files[0]
+
+    // 私人文件也可以分享了！
+    // if (file.is_private) {
+    //   throw new AppError('私人文件不支持分享', 400)
+    // }
+
+    const shareCode = generateShareCode()
+    let expiresAt = null
+
+    // 支持多种过期时间设置方式
+    if (expireType) {
+      const now = Date.now()
+      switch (expireType) {
+        case '1month':
+          expiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000)
+          break
+        case '1year':
+          expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000)
+          break
+        case 'permanent':
+          expiresAt = null
+          break
+        case 'custom':
+          if (customExpiresAt) {
+            expiresAt = new Date(customExpiresAt)
+          }
+          break
+        default:
+          throw new AppError('无效的过期类型', 400)
+      }
+    } else if (expiresIn) {
+      // 兼容旧的 expiresIn 参数（小时数）
+      expiresAt = new Date(Date.now() + expiresIn * 60 * 60 * 1000)
+    } else if (customExpiresAt) {
+      expiresAt = new Date(customExpiresAt)
+    }
+
+    await db.query(
+      'INSERT INTO share_links (file_id, share_code, password, expires_at, max_downloads) VALUES (?, ?, ?, ?, ?)',
+      [fileId, shareCode, password || null, expiresAt, maxDownloads || 0]
+    )
+
+    const shareUrl = `${req.protocol}://${req.get('host')}/api/files/s/${shareCode}`
+
+    res.json({
+      success: true,
+      shareUrl,
+      shareCode,
+      expiresAt,
+      expireType: expireType || 'custom'
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 通过分享链接下载
+router.get('/s/:shareCode', async (req, res, next) => {
+  try {
+    const { shareCode } = req.params
+    const { password } = req.query
+
+    if (!isValidShareCode(shareCode)) {
+      throw new AppError('无效的分享链接', 400)
+    }
+
+    const [shares] = await db.query(
+      'SELECT * FROM share_links WHERE share_code = ?',
+      [shareCode]
+    )
+
+    if (shares.length === 0) {
+      throw new AppError('分享链接不存在', 404)
+    }
+
+    const share = shares[0]
+
+    // 检查是否过期
+    if (share.expires_at && new Date(share.expires_at) < new Date()) {
+      throw new AppError('分享链接已过期', 410)
+    }
+
+    // 检查下载次数限制
+    if (share.max_downloads > 0 && share.downloads >= share.max_downloads) {
+      throw new AppError('下载次数已达上限', 403)
+    }
+
+    // 检查密码
+    if (share.password && share.password !== password) {
+      throw new AppError('密码错误', 401)
+    }
+
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ?',
+      [share.file_id]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    const file = files[0]
+    const filePath = path.join(process.env.UPLOAD_DIR || './uploads', file.filename)
+
+    if (!fs.existsSync(filePath)) {
+      throw new AppError('文件不存在', 404)
+    }
+
+    // 增加下载次数
+    await db.query('UPDATE share_links SET downloads = downloads + 1 WHERE id = ?', [share.id])
+    await db.query('UPDATE files SET downloads = downloads + 1 WHERE id = ?', [file.id])
+
+    // 解密并发送文件
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`)
+    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream')
+
+    const decryptStream = createDecryptStream(file.encryption_iv)
+    fs.createReadStream(filePath).pipe(decryptStream).pipe(res)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 删除文件
+router.delete('/files/:id', authMiddleware, async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const [files] = await db.query(
+      'SELECT * FROM files WHERE id = ? AND user_id = ?',
+      [id, req.user.id]
+    )
+
+    if (files.length === 0) {
+      throw new AppError('文件不存在或无权限', 404)
+    }
+
+    const file = files[0]
+    const filePath = path.join(process.env.UPLOAD_DIR || './uploads', file.filename)
+
+    await db.query('DELETE FROM files WHERE id = ?', [id])
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+    }
+
+    res.json({ success: true, message: '删除成功' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 删除分享链接
+router.delete('/share/:shareCode', authMiddleware, async (req, res, next) => {
+  try {
+    const { shareCode } = req.params
+
+    const [shares] = await db.query(`
+      SELECT sl.* FROM share_links sl
+      JOIN files f ON sl.file_id = f.id
+      WHERE sl.share_code = ? AND f.user_id = ?
+    `, [shareCode, req.user.id])
+
+    if (shares.length === 0) {
+      throw new AppError('分享链接不存在或无权限', 404)
+    }
+
+    await db.query('DELETE FROM share_links WHERE share_code = ?', [shareCode])
+
+    res.json({ success: true, message: '分享链接已删除' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 删除引用文件
+router.delete('/reference/:refId', authMiddleware, async (req, res, next) => {
+  try {
+    const { refId } = req.params
+
+    const [refs] = await db.query(
+      'SELECT * FROM file_references WHERE id = ? AND user_id = ?',
+      [refId, req.user.id]
+    )
+
+    if (refs.length === 0) {
+      throw new AppError('引用不存在或无权限', 404)
+    }
+
+    await db.query('DELETE FROM file_references WHERE id = ?', [refId])
+
+    res.json({ success: true, message: '已从私人空间移除（原文件保留）' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 批量清理失效引用
+router.post('/clean-invalid-references', authMiddleware, async (req, res, next) => {
+  try {
+    // 查找所有失效的引用（原文件已被删除）
+    const [invalidRefs] = await db.query(`
+      SELECT fr.id
+      FROM file_references fr
+      LEFT JOIN files f ON fr.original_file_id = f.id
+      WHERE fr.user_id = ? AND f.id IS NULL
+    `, [req.user.id])
+
+    if (invalidRefs.length === 0) {
+      return res.json({ success: true, message: '没有失效的引用', count: 0 })
+    }
+
+    // 删除所有失效引用
+    await db.query(`
+      DELETE fr FROM file_references fr
+      LEFT JOIN files f ON fr.original_file_id = f.id
+      WHERE fr.user_id = ? AND f.id IS NULL
+    `, [req.user.id])
+
+    res.json({ 
+      success: true, 
+      message: `已清理 ${invalidRefs.length} 个失效引用`,
+      count: invalidRefs.length
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+export default router
